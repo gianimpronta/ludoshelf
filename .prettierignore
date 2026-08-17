@@ -1,0 +1,9 @@
+# gerado e gerenciado pelo pnpm — reformatar produz um diff enorme e inutil
+pnpm-lock.yaml
+
+# entregaveis em prosa: tabelas e blocos de codigo sao formatados a mao
+docs/
+
+# nao versionados, mas evita varredura desnecessaria
+node_modules/
+.superpowers/
