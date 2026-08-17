@@ -270,6 +270,10 @@ describe('polegadasParaMm', () => {
   it('converte polegadas do BGG para milímetros', () => {
     expect(polegadasParaMm(11.61)).toBe(295)
   })
+
+  it('recusa valor não positivo', () => {
+    expect(() => polegadasParaMm(-1)).toThrow(/polegadas/)
+  })
 })
 
 describe('normalizarNome', () => {
@@ -283,6 +287,19 @@ describe('normalizarNome', () => {
 
   it('colapsa espaços repetidos e apara as pontas', () => {
     expect(normalizarNome('  Catan   ')).toBe('catan')
+  })
+
+  // Testes de equivalência: é isto que a função existe para fazer — casar a mesma
+  // caixa vinda de duas fontes diferentes. Testar só a saída de uma entrada por vez
+  // deixou passar o bug do indicador ordinal.
+  it('casa indicador ordinal com a letra simples equivalente', () => {
+    expect(normalizarNome('Descent 2ª Edição')).toBe(normalizarNome('Descent 2a Edicao'))
+  })
+
+  it('casa a mesma grafia com e sem acento e pontuação', () => {
+    expect(normalizarNome('Ora et Labora — Edição Nacional')).toBe(
+      normalizarNome('ora et labora edicao nacional'),
+    )
   })
 })
 
@@ -352,11 +369,15 @@ export function polegadasParaMm(polegadas: number): Milimetros {
  * Forma canônica de um nome para casamento entre fontes (spec S6): minúsculas,
  * sem acentos, sem pontuação, espaços colapsados.
  *
- * @example normalizarNome('Terra Mystica: Fogo & Gelo') // 'terra mystica fogo gelo'
+ * Usa NFKD e não NFD porque os indicadores ordinais `ª` e `º` não têm decomposição
+ * canônica — só a de compatibilidade os reduz a `a` e `o`. Sem isso, "2ª edição" da
+ * Ludopedia nunca casaria com "2a edicao" de uma planilha, e a falha seria silenciosa.
+ *
+ * @example normalizarNome('Descent 2ª Edição') // 'descent 2a edicao'
  */
 export function normalizarNome(nome: string): string {
   return nome
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
@@ -376,7 +397,7 @@ rm app/src/nucleo/fundacao.test.ts
 pnpm test
 ```
 
-Esperado: `Tests 8 passed (8)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 6: Commit**
 
@@ -528,7 +549,7 @@ export function pesoDeFrequencia(sinal: SinalDeFrequencia): number {
 pnpm test
 ```
 
-Esperado: `Tests 14 passed (14)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -583,9 +604,31 @@ describe('montarEstante', () => {
     expect(ids).toEqual(['e1-p0', 'e1-p1', 'e1-p2'])
   })
 
+  // Sem esta asserção, gravar alturaDoRodapeMm no lugar de alturaUtilMm passaria
+  // pelos outros cinco testes sem ninguém perceber.
+  it('carrega a altura livre de cada prateleira no compartimento certo', () => {
+    const alturas = montarEstante('e1', definicaoBase).compartimentos.map((c) => c.alturaUtilMm)
+    expect(alturas).toEqual([350, 350, 300])
+  })
+
   it('recusa estante sem prateleira nenhuma', () => {
     const vazia = { ...definicaoBase, alturasLivresMm: [] }
     expect(() => montarEstante('e1', vazia)).toThrow(/ao menos uma prateleira/)
+  })
+
+  it('aceita rodape zero, que e uma estante encostada no chao', () => {
+    const noChao = { ...definicaoBase, alturaDoRodapeMm: 0 }
+    expect(montarEstante('e1', noChao).compartimentos[0]?.alturaDaBaseMm).toBe(0)
+  })
+
+  it('recusa altura livre nao finita citando o indice', () => {
+    const suja = { ...definicaoBase, alturasLivresMm: [350, Number.NaN, 300] }
+    expect(() => montarEstante('e1', suja)).toThrow(/alturasLivresMm\[1\]/)
+  })
+
+  it('recusa rodape negativo', () => {
+    const invertida = { ...definicaoBase, alturaDoRodapeMm: -10 }
+    expect(() => montarEstante('e1', invertida)).toThrow(/alturaDoRodapeMm.*recebido: -10/)
   })
 })
 ```
@@ -602,8 +645,31 @@ Esperado: FAIL com `Failed to resolve import "./estante.js"`.
 
 `app/src/nucleo/estante.ts`:
 
+Antes, acrescente ao final de `app/src/nucleo/medidas.ts` a guarda que aceita zero —
+`exigirMedidaValida` exige `> 0`, e rodapé zero é uma estante encostada no chão:
+
 ```ts
-import type { Milimetros } from './medidas.js'
+/**
+ * Falha se o valor não puder ser uma distância. Diferente de `exigirMedidaValida`,
+ * aceita zero: rodapé zero é uma estante encostada no chão, que é real.
+ *
+ * @example exigirDistanciaValida(0, 'alturaDoRodapeMm')
+ */
+export function exigirDistanciaValida(valor: number, campo: string): void {
+  if (!Number.isFinite(valor) || valor < 0) {
+    throw new RangeError(
+      `${campo} deve ser um número finito não negativo; recebido: ${JSON.stringify(valor)}`,
+    )
+  }
+}
+```
+
+Com dois testes em `medidas.test.ts`: aceita zero, e recusa negativo citando campo e valor.
+
+`app/src/nucleo/estante.ts`:
+
+```ts
+import { exigirDistanciaValida, exigirMedidaValida, type Milimetros } from './medidas.js'
 
 /**
  * Um espaço fechado onde caixas podem ser postas. Prateleira corrida é o caso em que
@@ -651,6 +717,7 @@ export function montarEstante(id: string, definicao: DefinicaoDeEstante): Estant
         `recebido alturasLivresMm: []`,
     )
   }
+  validarDefinicao(definicao)
   return {
     id,
     nome: definicao.nome,
@@ -658,6 +725,21 @@ export function montarEstante(id: string, definicao: DefinicaoDeEstante): Estant
     espessuraDaPrateleiraMm: definicao.espessuraDaPrateleiraMm,
     compartimentos: derivarCompartimentos(id, definicao),
   }
+}
+
+/**
+ * Valida na entrada porque `alturaDaBaseMm` é um acumulador: um valor inválido em
+ * qualquer prateleira se propaga para todas as de cima, e o sintoma só apareceria
+ * lá na frente, no critério "altura dos olhos", longe da causa.
+ */
+function validarDefinicao(definicao: DefinicaoDeEstante): void {
+  exigirMedidaValida(definicao.larguraUtilMm, 'larguraUtilMm')
+  exigirMedidaValida(definicao.profundidadeUtilMm, 'profundidadeUtilMm')
+  exigirDistanciaValida(definicao.alturaDoRodapeMm, 'alturaDoRodapeMm')
+  exigirDistanciaValida(definicao.espessuraDaPrateleiraMm, 'espessuraDaPrateleiraMm')
+  definicao.alturasLivresMm.forEach((altura, indice) =>
+    exigirMedidaValida(altura, `alturasLivresMm[${indice}]`),
+  )
 }
 
 function derivarCompartimentos(
@@ -686,7 +768,7 @@ function derivarCompartimentos(
 pnpm test
 ```
 
-Esperado: `Tests 19 passed (19)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -828,7 +910,7 @@ export function sortearIndice(gerador: Gerador, tamanho: number): number {
 pnpm test
 ```
 
-Esperado: `Tests 25 passed (25)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -917,6 +999,17 @@ describe('encaixar', () => {
       faltaMm: 20,
     })
   })
+
+  it('recusa por profundidade quando a caixa cabe em altura mas nao no fundo', () => {
+    // Ambas as poses cabem na altura de 400; nenhuma cabe na profundidade de 200.
+    // Cobre o ramo em que `fundoNecessarioMm` usa `menorMm` em vez de `maiorMm`.
+    const medidas = criarMedidas(300, 220, 60, manual, true)
+    expect(encaixar(medidas, prateleira(400, 200))).toEqual({
+      cabe: false,
+      motivo: 'fundo-demais',
+      faltaMm: 20,
+    })
+  })
 })
 ```
 
@@ -953,7 +1046,10 @@ export type ResultadoDeEncaixe =
  * @example encaixar(criarMedidas(300, 220, 60, origem, true), prateleira250)
  *          // { cabe: true, apoio: 'paisagem' }
  */
-export function encaixar(medidas: MedidasDaCaixa, compartimento: Compartimento): ResultadoDeEncaixe {
+export function encaixar(
+  medidas: MedidasDaCaixa,
+  compartimento: Compartimento,
+): ResultadoDeEncaixe {
   if (medidas.espessuraMm > compartimento.larguraUtilMm) {
     return recusa('largo-demais', medidas.espessuraMm - compartimento.larguraUtilMm)
   }
@@ -1008,7 +1104,7 @@ function recusa(motivo: MotivoDeRecusa, faltaMm: Milimetros): ResultadoDeEncaixe
 pnpm test
 ```
 
-Esperado: `Tests 31 passed (31)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1072,6 +1168,17 @@ describe('agruparFamilias', () => {
   it('ignora expansao cujo base nao esta na colecao', () => {
     expect(agruparFamilias([jogo('b', 'Expansao orfa', 'inexistente')])).toEqual([])
   })
+
+  // Dados sujos vindos de importacao: sem estas guardas o agrupamento sai errado
+  // em silencio — nada lanca, nenhum teste fica vermelho, so a pontuacao fica torta.
+  it('ignora jogo que aponta para si mesmo', () => {
+    expect(agruparFamilias([jogo('a', 'Auto-referente', 'a')])).toEqual([])
+  })
+
+  it('nao cria familias sobrepostas quando dois jogos se apontam mutuamente', () => {
+    const familias = agruparFamilias([jogo('a', 'Um', 'b'), jogo('b', 'Outro', 'a')])
+    expect(familias).toEqual([])
+  })
 })
 ```
 
@@ -1113,8 +1220,11 @@ export function agruparFamilias(jogos: readonly CaixaDeJogo[]): readonly Familia
     expansoesPorBase.set(jogo.idJogoBase, irmas)
   }
 
+  // `idJogoBase === null` é o que impede auto-referência e ciclo: quem já é expansão
+  // nunca vira base. Sem isso, `a→b` com `b→a` produziria duas famílias sobrepostas,
+  // e `a→a` produziria uma família com o membro repetido — os dois em silêncio.
   return jogos
-    .filter((jogo) => expansoesPorBase.has(jogo.id))
+    .filter((jogo) => jogo.idJogoBase === null && expansoesPorBase.has(jogo.id))
     .map((base) => ({
       idBase: base.id,
       membros: [base.id, ...(expansoesPorBase.get(base.id) ?? [])],
@@ -1128,7 +1238,7 @@ export function agruparFamilias(jogos: readonly CaixaDeJogo[]): readonly Familia
 pnpm test
 ```
 
-Esperado: `Tests 35 passed (35)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1228,9 +1338,11 @@ export interface JogoNaoAlocado {
   readonly faltaMm: Milimetros
 }
 
+export type NomeDeTermo = 'sobraConcentrada' | 'familiaDividida' | 'alturaDosOlhos'
+
 export interface Pontuacao {
   readonly total: number
-  readonly porTermo: Readonly<Record<'sobraConcentrada' | 'familiaDividida' | 'alturaDosOlhos', number>>
+  readonly porTermo: Readonly<Record<NomeDeTermo, number>>
 }
 
 export interface Arranjo {
@@ -1281,7 +1393,16 @@ export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compart
   }
   return compartimento
 }
+
+/** Pontuação neutra, usada antes de o motor pontuar de verdade. */
+export const PONTUACAO_ZERADA: Pontuacao = {
+  total: 0,
+  porTermo: { sobraConcentrada: 0, familiaDividida: 0, alturaDosOlhos: 0 },
+}
 ```
+
+`PONTUACAO_ZERADA` e `NomeDeTermo` existem para as Tasks 10 e 11 não repetirem o literal
+`{ total: 0, porTermo: { ... } }` em três arquivos. Use-os no lugar do literal.
 
 - [ ] **Step 4: Rodar os testes**
 
@@ -1289,7 +1410,7 @@ export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compart
 pnpm test
 ```
 
-Esperado: `Tests 38 passed (38)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1441,7 +1562,67 @@ pnpm test
 
 Esperado: FAIL com `Failed to resolve import "./pontuacao.js"`.
 
-- [ ] **Step 3: Implementar**
+- [ ] **Step 3: Fechar a porta de entrada do peso de frequência**
+
+`pesoDeFrequencia` recebe `quantidade` de fontes sujas — coluna de CSV digitada à mão e
+resposta da API da Ludopedia. Um `NaN` ou `Infinity` ali não lança nada: contamina o total
+da pontuação, e como toda comparação com `NaN` é `false`, a busca local (Task 11) **para de
+aceitar melhorias sem erro e sem teste vermelho**. Feche isso antes de `pontuar` consumir o
+valor.
+
+Em `app/src/nucleo/jogo.ts`, substitua `pesoDeFrequencia` por:
+
+```ts
+/**
+ * Converte o sinal de frequência no número que a pontuação usa.
+ *
+ * Valida `quantidade` porque ela vem de CSV e da API da Ludopedia: `NaN` ou
+ * `Infinity` aqui viram `NaN` no total da pontuação, e aí toda comparação da busca
+ * local devolve `false` — o otimizador para de melhorar sem acusar nada.
+ *
+ * @example pesoDeFrequencia({ tipo: 'partidas', quantidade: 12 }) // 12
+ */
+export function pesoDeFrequencia(sinal: SinalDeFrequencia): number {
+  switch (sinal.tipo) {
+    case 'desconhecida':
+      return 0
+    case 'partidas':
+      return exigirQuantidadeValida(sinal.quantidade)
+    case 'destaque':
+      return PESO_DE_DESTAQUE
+  }
+}
+
+function exigirQuantidadeValida(quantidade: number): number {
+  if (!Number.isFinite(quantidade) || quantidade < 0) {
+    throw new RangeError(
+      `quantidade de partidas deve ser um número finito não negativo; ` +
+        `recebido: ${JSON.stringify(quantidade)}`,
+    )
+  }
+  return quantidade
+}
+```
+
+E em `app/src/nucleo/jogo.test.ts`, acrescente ao `describe('pesoDeFrequencia', ...)`:
+
+```ts
+  it('aceita zero partidas, que e dado e nao ausencia de dado', () => {
+    expect(pesoDeFrequencia({ tipo: 'partidas', quantidade: 0 })).toBe(0)
+  })
+
+  it('recusa quantidade nao finita citando o valor recebido', () => {
+    expect(() => pesoDeFrequencia({ tipo: 'partidas', quantidade: Number.NaN })).toThrow(
+      /recebido: null/,
+    )
+  })
+
+  it('recusa quantidade negativa', () => {
+    expect(() => pesoDeFrequencia({ tipo: 'partidas', quantidade: -1 })).toThrow(/recebido: -1/)
+  })
+```
+
+- [ ] **Step 4: Implementar a pontuação**
 
 `app/src/nucleo/pontuacao.ts`:
 
@@ -1562,18 +1743,19 @@ function medirAlturaDosOlhos(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
 }
 ```
 
-- [ ] **Step 4: Rodar os testes**
+- [ ] **Step 5: Rodar os testes**
 
 ```bash
 pnpm test
 ```
 
-Esperado: `Tests 48 passed (48)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo — 43 anteriores, mais 3 do guard de `quantidade` no Step 3
+e 10 da pontuação.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add app/src/nucleo/pontuacao.ts app/src/nucleo/pontuacao.test.ts
+git add app/src/nucleo/pontuacao.ts app/src/nucleo/pontuacao.test.ts app/src/nucleo/jogo.ts app/src/nucleo/jogo.test.ts
 git commit -m "feat(nucleo): pontua sobra concentrada, familia dividida e altura dos olhos"
 ```
 
@@ -1878,7 +2060,7 @@ function diagnosticar(
 pnpm test
 ```
 
-Esperado: `Tests 54 passed (54)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -2201,7 +2383,7 @@ function sortearCompartimentoOcupado(
 pnpm test
 ```
 
-Esperado: `Tests 59 passed (59)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -2386,7 +2568,7 @@ function reposicionar(
 pnpm test
 ```
 
-Esperado: `Tests 63 passed (63)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -2541,7 +2723,7 @@ export function arranjar(entrada: EntradaDoMotor): Arranjo {
 pnpm test
 ```
 
-Esperado: `Tests 68 passed (68)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 Se o teste "o que sobra é o menos jogado" falhar, aumente `iteracoes` para `20000` na
 função `arranjarCom` do teste antes de mexer no algoritmo: o FFD inicial ordena por
@@ -2851,3 +3033,66 @@ Esperado: `## main...origin/main` sem divergência.
 **Fora deste plano, por pertencerem aos planos 2 a 4:** telas (§8), cena 3D (§8),
 persistência (§5.3), importador de CSV (§9.3), tabela semeada (§9.4), proxy e adaptadores
 (§9.2), tratamento de erros de rede (§10).
+
+## Desvios entre o plano e o que foi implementado
+
+Executado em 2026-08-16/17. O código é a fonte de verdade; este registro existe para
+quem for escrever os planos 2 a 4 não partir de premissas falsas.
+
+**Defeitos do próprio plano, encontrados durante a execução:**
+
+1. **`normalizarNome` usava `NFD`** (Task 2). `NFD` não normaliza `ª` e `º`, que são letras
+   sem decomposição canônica. "2ª edição" da Ludopedia nunca casaria com "2a edição" de
+   planilha, em silêncio. Corrigido para `NFKD`, com testes de equivalência.
+2. **`montarEstante` não validava a definição** (Task 4). `alturaDaBaseMm` é acumulador: um
+   valor inválido contamina todos os compartimentos acima. Adicionada `exigirDistanciaValida`,
+   que aceita zero porque rodapé zero é uma estante encostada no chão.
+3. **`quantidade` de partidas entrava sem guarda** (Task 3). `NaN` viraria `NaN` no total, e
+   como toda comparação com `NaN` é `false`, a busca local pararia de aceitar melhorias sem
+   erro nem teste vermelho.
+4. **`agruparFamilias` aceitava ciclo e auto-referência** (Task 7). Produzia famílias
+   sobrepostas e membros repetidos, em silêncio. Corrigido exigindo `idJogoBase === null`
+   para ser base.
+5. **`medirFamiliaDividida` devolvia `-0`** (Task 9). `Object.is(-0, 0)` é `false` e a
+   interface mostraria "-0". Só nega quando há o que penalizar.
+6. **O critério "altura dos olhos" era cego a quem fica de fora** (Tasks 9 e 13). Normalizava
+   pelo peso dos jogos *posicionados*, produzindo uma média que mede só *onde* eles estão.
+   O teste do plano para "o que sobra é o menos jogado" passava por sorte da ordenação; com
+   a ordem de entrada invertida, o motor guardava o jogo nunca jogado e descartava o mais
+   jogado, violando a spec §11. Agora normaliza pelo peso da **coleção inteira**.
+7. **A busca local não tinha como agir sobre isso** (Task 11). Foram acrescentados dois
+   movimentos ausentes do plano: `alocarPendente`, aceito mesmo sem melhorar a pontuação
+   porque caber é restrição dura; e `trocarComPendente`, o único que desaloca alguém, sem o
+   qual quem fica na estante seria decidido pela ordem do first-fit e não pelos critérios.
+8. **O cenário de regressão era fisicamente impossível** (Task 15). Afirmava que doze jogos
+   cabiam numa Billy de 280 mm de profundidade; uma caixa quadrada de 295 mm não entra numa
+   prateleira de 280 mm — é exatamente por isso que colecionador usa Kallax. O cenário feliz
+   passou para 390 mm, e o fato virou um segundo cenário que fixa quais caixas são recusadas
+   por profundidade e que o motor informa os 15 mm que faltaram.
+
+**Ajustes de infraestrutura:**
+
+- `.prettierignore` (Task 1): sem ele `pnpm format:check` reprovava o lockfile e os
+  documentos já na primeira execução.
+- `app/tsconfig.json` declara `types: ["node"]` (Task 14): o teste de fronteira lê o
+  diretório do núcleo com `node:fs`, e sem isso o `typecheck` quebrava com os testes verdes.
+- `PONTUACAO_ZERADA` e `NomeDeTermo` extraídos para `arranjo.ts`, evitando repetir o literal
+  da pontuação neutra em três arquivos.
+- As contagens cumulativas de teste foram removidas: quebravam a cada teste acrescentado
+  numa task anterior e precisaram ser recalculadas três vezes.
+
+**Resultado:** 126 testes, `pnpm typecheck` limpo, `pnpm format:check` limpo.
+
+## Itens conhecidos, deixados para a camada de importação (plano 3)
+
+Levantados durante a revisão deste plano e conscientemente adiados, porque o lugar certo de
+tratá-los é onde o dado externo entra, não no núcleo:
+
+- **`™` sobrevive à normalização.** `NFKD` decompõe `™` (U+2122) nas letras `T` e `M`, que
+  passam pelo filtro `\p{Letter}`. Logo `normalizarNome('Catan™')` devolve `'catantm'` e não
+  casa com `'catan'`. `®` não tem esse problema. Não bloqueia porque Ludopedia, BGG e
+  exportações de CSV não trazem marca registrada no campo de nome — mas se aparecer, a
+  correção é remover `\p{So}` antes de normalizar, com teste de regressão.
+- **Nome vazio ou só de pontuação colapsa para `''`.** Dois itens sem nome real casariam
+  entre si. A validação pertence ao importador de CSV, que deve recusar a linha citando o
+  número dela, e não ao núcleo.
