@@ -17,6 +17,7 @@ build/
 
 # editores e SO
 .vscode/
+.claude.local.md
 .idea/
 .DS_Store
 Thumbs.db
