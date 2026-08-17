@@ -111,7 +111,7 @@ describe('melhorar', () => {
     }
     const resultado = melhorar(comPendente, contexto, PESOS_PADRAO, geradorMulberry32(5), 500)
     expect(resultado.naoAlocados).toEqual([])
-    expect(resultado.posicoes.map((p) => p.idJogo).sort()).toEqual(['a', 'b', 'sobrou'])
+    expect(resultado.posicoes.map((posicao) => posicao.idJogo).sort()).toEqual(['a', 'b', 'sobrou'])
   })
 
   it('nao desaloca ninguem que ja estava posicionado', () => {
@@ -141,16 +141,19 @@ describe('melhorar', () => {
       jogo('solto2', 250),
       jogo('solto3', 250),
     ]
+    const esperados = new Set(jogos.map((jogo) => jogo.id))
     for (const semente of [1, 7, 42, 99, 20260817]) {
       const contexto = montarContexto(jogos, apertada)
       const inicial = montarArranjoInicial(jogos, contexto)
       const resultado = melhorar(inicial, contexto, PESOS_PADRAO, geradorMulberry32(semente), 20000)
-      const posicionados = new Set(resultado.posicoes.map((p) => p.idJogo))
-      const pendentes = new Set(resultado.naoAlocados.map((n) => n.idJogo))
+      const posicionados = new Set(resultado.posicoes.map((posicao) => posicao.idJogo))
+      const pendentes = new Set(resultado.naoAlocados.map((naoAlocado) => naoAlocado.idJogo))
+      expect(posicionados.size).toBe(resultado.posicoes.length)
+      expect(pendentes.size).toBe(resultado.naoAlocados.length)
       for (const idJogo of posicionados) {
         expect(pendentes.has(idJogo)).toBe(false)
       }
-      expect(resultado.posicoes.length + resultado.naoAlocados.length).toBe(jogos.length)
+      expect(new Set([...posicionados, ...pendentes])).toEqual(esperados)
     }
   })
 })

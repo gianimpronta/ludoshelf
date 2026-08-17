@@ -87,6 +87,12 @@ describe('exigirDistanciaValida', () => {
       /alturaDoRodapeMm.*recebido: -5/,
     )
   })
+
+  it('recusa fracao, mesmo positiva', () => {
+    expect(() => exigirDistanciaValida(0.5, 'alturaDoRodapeMm')).toThrow(
+      /alturaDoRodapeMm.*recebido: 0.5/,
+    )
+  })
 })
 
 describe('exigirMilimetroValido', () => {

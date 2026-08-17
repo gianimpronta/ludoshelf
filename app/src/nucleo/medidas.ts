@@ -21,18 +21,17 @@ export function exigirMedidaValida(valor: number, campo: string): void {
 }
 
 /**
- * Falha se o valor não puder ser uma distância. Diferente de `exigirMedidaValida`,
- * aceita zero: rodapé zero é uma estante encostada no chão, que é real. Diferente
- * de `exigirMilimetroValido`, esta ainda não pede inteiro — quem chama já está
- * dentro do domínio de milímetro e deve compor com `exigirMilimetroValido` quando
- * a integralidade importar.
+ * Falha se o valor não for um milímetro inteiro não negativo válido. Diferente de
+ * `exigirMilimetroValido`, aceita zero: rodapé zero é uma estante encostada no
+ * chão, que é real. Só é usada dentro do domínio de milímetro (nunca em cm/pol
+ * brutos), então exigir inteiro aqui é seguro.
  *
  * @example exigirDistanciaValida(0, 'alturaDoRodapeMm')
  */
 export function exigirDistanciaValida(valor: number, campo: string): void {
-  if (!Number.isFinite(valor) || valor < 0) {
+  if (!Number.isFinite(valor) || !Number.isInteger(valor) || valor < 0) {
     throw new RangeError(
-      `${campo} deve ser um número finito não negativo; recebido: ${JSON.stringify(valor)}`,
+      `${campo} deve ser um número inteiro não negativo; recebido: ${JSON.stringify(valor)}`,
     )
   }
 }

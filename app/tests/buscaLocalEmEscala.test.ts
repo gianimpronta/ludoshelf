@@ -29,8 +29,8 @@ function montarColecaoEmEscala(): CaixaDeJogo[] {
     jogo('exp1', 70, 'base'),
     jogo('exp2', 60, 'base'),
   ]
-  for (let i = 0; i < 40; i += 1) {
-    jogos.push(jogo(`solto${i}`, 40 + ((i * 37) % 90)))
+  for (let indice = 0; indice < 40; indice += 1) {
+    jogos.push(jogo(`solto${indice}`, 40 + ((indice * 37) % 90)))
   }
   return jogos
 }
@@ -60,10 +60,16 @@ it('nao produz nem posicao duplicada nem duplicata entre posicoes e naoAlocados,
     const inicial = montarArranjoInicial(jogos, contexto)
     const resultado = melhorar(inicial, contexto, PESOS_PADRAO, geradorMulberry32(semente), 20000)
 
-    const posicionados = new Set(resultado.posicoes.map((p) => p.idJogo))
-    const pendentes = new Set(resultado.naoAlocados.map((n) => n.idJogo))
-    expect(posicionados.size).toBe(resultado.posicoes.length) // nenhuma posição duplicada
+    // Set + comparação de tamanho é o que pega ID duplicado; comparar a união
+    // com o conjunto esperado é o que pega ID sumido — nenhum dos dois sozinho
+    // pega as duas coisas ao mesmo tempo (um ID duplicado mais um ID ausente
+    // passaria batido só contando posicoes.length + naoAlocados.length).
+    const posicionados = new Set(resultado.posicoes.map((posicao) => posicao.idJogo))
+    const pendentes = new Set(resultado.naoAlocados.map((naoAlocado) => naoAlocado.idJogo))
+    const esperados = new Set(jogos.map((jogo) => jogo.id))
+    expect(posicionados.size).toBe(resultado.posicoes.length)
+    expect(pendentes.size).toBe(resultado.naoAlocados.length)
     expect([...posicionados].some((id) => pendentes.has(id))).toBe(false)
-    expect(resultado.posicoes.length + resultado.naoAlocados.length).toBe(jogos.length)
+    expect(new Set([...posicionados, ...pendentes])).toEqual(esperados)
   }
 })
