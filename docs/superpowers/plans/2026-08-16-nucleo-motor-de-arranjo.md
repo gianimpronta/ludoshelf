@@ -1093,6 +1093,17 @@ describe('agruparFamilias', () => {
   it('ignora expansao cujo base nao esta na colecao', () => {
     expect(agruparFamilias([jogo('b', 'Expansao orfa', 'inexistente')])).toEqual([])
   })
+
+  // Dados sujos vindos de importacao: sem estas guardas o agrupamento sai errado
+  // em silencio — nada lanca, nenhum teste fica vermelho, so a pontuacao fica torta.
+  it('ignora jogo que aponta para si mesmo', () => {
+    expect(agruparFamilias([jogo('a', 'Auto-referente', 'a')])).toEqual([])
+  })
+
+  it('nao cria familias sobrepostas quando dois jogos se apontam mutuamente', () => {
+    const familias = agruparFamilias([jogo('a', 'Um', 'b'), jogo('b', 'Outro', 'a')])
+    expect(familias).toEqual([])
+  })
 })
 ```
 
@@ -1134,8 +1145,11 @@ export function agruparFamilias(jogos: readonly CaixaDeJogo[]): readonly Familia
     expansoesPorBase.set(jogo.idJogoBase, irmas)
   }
 
+  // `idJogoBase === null` é o que impede auto-referência e ciclo: quem já é expansão
+  // nunca vira base. Sem isso, `a→b` com `b→a` produziria duas famílias sobrepostas,
+  // e `a→a` produziria uma família com o membro repetido — os dois em silêncio.
   return jogos
-    .filter((jogo) => expansoesPorBase.has(jogo.id))
+    .filter((jogo) => jogo.idJogoBase === null && expansoesPorBase.has(jogo.id))
     .map((base) => ({
       idBase: base.id,
       membros: [base.id, ...(expansoesPorBase.get(base.id) ?? [])],
@@ -1149,7 +1163,7 @@ export function agruparFamilias(jogos: readonly CaixaDeJogo[]): readonly Familia
 pnpm test
 ```
 
-Esperado: `Tests 38 passed (38)`.
+Esperado: `Tests 40 passed (40)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1310,7 +1324,7 @@ export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compart
 pnpm test
 ```
 
-Esperado: `Tests 41 passed (41)`.
+Esperado: `Tests 43 passed (43)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1462,7 +1476,67 @@ pnpm test
 
 Esperado: FAIL com `Failed to resolve import "./pontuacao.js"`.
 
-- [ ] **Step 3: Implementar**
+- [ ] **Step 3: Fechar a porta de entrada do peso de frequência**
+
+`pesoDeFrequencia` recebe `quantidade` de fontes sujas — coluna de CSV digitada à mão e
+resposta da API da Ludopedia. Um `NaN` ou `Infinity` ali não lança nada: contamina o total
+da pontuação, e como toda comparação com `NaN` é `false`, a busca local (Task 11) **para de
+aceitar melhorias sem erro e sem teste vermelho**. Feche isso antes de `pontuar` consumir o
+valor.
+
+Em `app/src/nucleo/jogo.ts`, substitua `pesoDeFrequencia` por:
+
+```ts
+/**
+ * Converte o sinal de frequência no número que a pontuação usa.
+ *
+ * Valida `quantidade` porque ela vem de CSV e da API da Ludopedia: `NaN` ou
+ * `Infinity` aqui viram `NaN` no total da pontuação, e aí toda comparação da busca
+ * local devolve `false` — o otimizador para de melhorar sem acusar nada.
+ *
+ * @example pesoDeFrequencia({ tipo: 'partidas', quantidade: 12 }) // 12
+ */
+export function pesoDeFrequencia(sinal: SinalDeFrequencia): number {
+  switch (sinal.tipo) {
+    case 'desconhecida':
+      return 0
+    case 'partidas':
+      return exigirQuantidadeValida(sinal.quantidade)
+    case 'destaque':
+      return PESO_DE_DESTAQUE
+  }
+}
+
+function exigirQuantidadeValida(quantidade: number): number {
+  if (!Number.isFinite(quantidade) || quantidade < 0) {
+    throw new RangeError(
+      `quantidade de partidas deve ser um número finito não negativo; ` +
+        `recebido: ${JSON.stringify(quantidade)}`,
+    )
+  }
+  return quantidade
+}
+```
+
+E em `app/src/nucleo/jogo.test.ts`, acrescente ao `describe('pesoDeFrequencia', ...)`:
+
+```ts
+  it('aceita zero partidas, que e dado e nao ausencia de dado', () => {
+    expect(pesoDeFrequencia({ tipo: 'partidas', quantidade: 0 })).toBe(0)
+  })
+
+  it('recusa quantidade nao finita citando o valor recebido', () => {
+    expect(() => pesoDeFrequencia({ tipo: 'partidas', quantidade: Number.NaN })).toThrow(
+      /recebido: null/,
+    )
+  })
+
+  it('recusa quantidade negativa', () => {
+    expect(() => pesoDeFrequencia({ tipo: 'partidas', quantidade: -1 })).toThrow(/recebido: -1/)
+  })
+```
+
+- [ ] **Step 4: Implementar a pontuação**
 
 `app/src/nucleo/pontuacao.ts`:
 
@@ -1583,18 +1657,19 @@ function medirAlturaDosOlhos(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
 }
 ```
 
-- [ ] **Step 4: Rodar os testes**
+- [ ] **Step 5: Rodar os testes**
 
 ```bash
 pnpm test
 ```
 
-Esperado: `Tests 51 passed (51)`.
+Esperado: `Tests 56 passed (56)` — 43 anteriores, mais 3 do guard de `quantidade` no Step 3
+e 10 da pontuação.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add app/src/nucleo/pontuacao.ts app/src/nucleo/pontuacao.test.ts
+git add app/src/nucleo/pontuacao.ts app/src/nucleo/pontuacao.test.ts app/src/nucleo/jogo.ts app/src/nucleo/jogo.test.ts
 git commit -m "feat(nucleo): pontua sobra concentrada, familia dividida e altura dos olhos"
 ```
 
@@ -1899,7 +1974,7 @@ function diagnosticar(
 pnpm test
 ```
 
-Esperado: `Tests 57 passed (57)`.
+Esperado: `Tests 62 passed (62)`.
 
 - [ ] **Step 5: Commit**
 
@@ -2222,7 +2297,7 @@ function sortearCompartimentoOcupado(
 pnpm test
 ```
 
-Esperado: `Tests 62 passed (62)`.
+Esperado: `Tests 67 passed (67)`.
 
 - [ ] **Step 5: Commit**
 
@@ -2407,7 +2482,7 @@ function reposicionar(
 pnpm test
 ```
 
-Esperado: `Tests 66 passed (66)`.
+Esperado: `Tests 71 passed (71)`.
 
 - [ ] **Step 5: Commit**
 
@@ -2562,7 +2637,7 @@ export function arranjar(entrada: EntradaDoMotor): Arranjo {
 pnpm test
 ```
 
-Esperado: `Tests 71 passed (71)`.
+Esperado: `Tests 76 passed (76)`.
 
 Se o teste "o que sobra é o menos jogado" falhar, aumente `iteracoes` para `20000` na
 função `arranjarCom` do teste antes de mexer no algoritmo: o FFD inicial ordena por
