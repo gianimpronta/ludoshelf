@@ -270,6 +270,10 @@ describe('polegadasParaMm', () => {
   it('converte polegadas do BGG para milímetros', () => {
     expect(polegadasParaMm(11.61)).toBe(295)
   })
+
+  it('recusa valor não positivo', () => {
+    expect(() => polegadasParaMm(-1)).toThrow(/polegadas/)
+  })
 })
 
 describe('normalizarNome', () => {
@@ -283,6 +287,19 @@ describe('normalizarNome', () => {
 
   it('colapsa espaços repetidos e apara as pontas', () => {
     expect(normalizarNome('  Catan   ')).toBe('catan')
+  })
+
+  // Testes de equivalência: é isto que a função existe para fazer — casar a mesma
+  // caixa vinda de duas fontes diferentes. Testar só a saída de uma entrada por vez
+  // deixou passar o bug do indicador ordinal.
+  it('casa indicador ordinal com a letra simples equivalente', () => {
+    expect(normalizarNome('Descent 2ª Edição')).toBe(normalizarNome('Descent 2a Edicao'))
+  })
+
+  it('casa a mesma grafia com e sem acento e pontuação', () => {
+    expect(normalizarNome('Ora et Labora — Edição Nacional')).toBe(
+      normalizarNome('ora et labora edicao nacional'),
+    )
   })
 })
 
@@ -352,11 +369,15 @@ export function polegadasParaMm(polegadas: number): Milimetros {
  * Forma canônica de um nome para casamento entre fontes (spec S6): minúsculas,
  * sem acentos, sem pontuação, espaços colapsados.
  *
- * @example normalizarNome('Terra Mystica: Fogo & Gelo') // 'terra mystica fogo gelo'
+ * Usa NFKD e não NFD porque os indicadores ordinais `ª` e `º` não têm decomposição
+ * canônica — só a de compatibilidade os reduz a `a` e `o`. Sem isso, "2ª edição" da
+ * Ludopedia nunca casaria com "2a edicao" de uma planilha, e a falha seria silenciosa.
+ *
+ * @example normalizarNome('Descent 2ª Edição') // 'descent 2a edicao'
  */
 export function normalizarNome(nome: string): string {
   return nome
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
@@ -376,7 +397,7 @@ rm app/src/nucleo/fundacao.test.ts
 pnpm test
 ```
 
-Esperado: `Tests 8 passed (8)`.
+Esperado: `Tests 11 passed (11)`.
 
 - [ ] **Step 6: Commit**
 
@@ -528,7 +549,7 @@ export function pesoDeFrequencia(sinal: SinalDeFrequencia): number {
 pnpm test
 ```
 
-Esperado: `Tests 14 passed (14)`.
+Esperado: `Tests 17 passed (17)`.
 
 - [ ] **Step 5: Commit**
 
@@ -686,7 +707,7 @@ function derivarCompartimentos(
 pnpm test
 ```
 
-Esperado: `Tests 19 passed (19)`.
+Esperado: `Tests 22 passed (22)`.
 
 - [ ] **Step 5: Commit**
 
@@ -828,7 +849,7 @@ export function sortearIndice(gerador: Gerador, tamanho: number): number {
 pnpm test
 ```
 
-Esperado: `Tests 25 passed (25)`.
+Esperado: `Tests 28 passed (28)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1008,7 +1029,7 @@ function recusa(motivo: MotivoDeRecusa, faltaMm: Milimetros): ResultadoDeEncaixe
 pnpm test
 ```
 
-Esperado: `Tests 31 passed (31)`.
+Esperado: `Tests 34 passed (34)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1128,7 +1149,7 @@ export function agruparFamilias(jogos: readonly CaixaDeJogo[]): readonly Familia
 pnpm test
 ```
 
-Esperado: `Tests 35 passed (35)`.
+Esperado: `Tests 38 passed (38)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1289,7 +1310,7 @@ export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compart
 pnpm test
 ```
 
-Esperado: `Tests 38 passed (38)`.
+Esperado: `Tests 41 passed (41)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1568,7 +1589,7 @@ function medirAlturaDosOlhos(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
 pnpm test
 ```
 
-Esperado: `Tests 48 passed (48)`.
+Esperado: `Tests 51 passed (51)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1878,7 +1899,7 @@ function diagnosticar(
 pnpm test
 ```
 
-Esperado: `Tests 54 passed (54)`.
+Esperado: `Tests 57 passed (57)`.
 
 - [ ] **Step 5: Commit**
 
@@ -2201,7 +2222,7 @@ function sortearCompartimentoOcupado(
 pnpm test
 ```
 
-Esperado: `Tests 59 passed (59)`.
+Esperado: `Tests 62 passed (62)`.
 
 - [ ] **Step 5: Commit**
 
@@ -2386,7 +2407,7 @@ function reposicionar(
 pnpm test
 ```
 
-Esperado: `Tests 63 passed (63)`.
+Esperado: `Tests 66 passed (66)`.
 
 - [ ] **Step 5: Commit**
 
@@ -2541,7 +2562,7 @@ export function arranjar(entrada: EntradaDoMotor): Arranjo {
 pnpm test
 ```
 
-Esperado: `Tests 68 passed (68)`.
+Esperado: `Tests 71 passed (71)`.
 
 Se o teste "o que sobra é o menos jogado" falhar, aumente `iteracoes` para `20000` na
 função `arranjarCom` do teste antes de mexer no algoritmo: o FFD inicial ordena por
