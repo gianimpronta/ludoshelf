@@ -19,6 +19,10 @@ describe('polegadasParaMm', () => {
   it('converte polegadas do BGG para milímetros', () => {
     expect(polegadasParaMm(11.61)).toBe(295)
   })
+
+  it('recusa valor não positivo', () => {
+    expect(() => polegadasParaMm(-1)).toThrow(/polegadas/)
+  })
 })
 
 describe('normalizarNome', () => {
@@ -32,6 +36,16 @@ describe('normalizarNome', () => {
 
   it('colapsa espaços repetidos e apara as pontas', () => {
     expect(normalizarNome('  Catan   ')).toBe('catan')
+  })
+
+  it('casa indicador ordinal com a letra simples equivalente', () => {
+    expect(normalizarNome('Descent 2ª Edição')).toBe(normalizarNome('Descent 2a Edicao'))
+  })
+
+  it('casa a mesma grafia com e sem acento e pontuação', () => {
+    expect(normalizarNome('Ora et Labora — Edição Nacional')).toBe(
+      normalizarNome('ora et labora edicao nacional'),
+    )
   })
 })
 

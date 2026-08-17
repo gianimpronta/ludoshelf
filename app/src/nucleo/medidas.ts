@@ -42,11 +42,16 @@ export function polegadasParaMm(polegadas: number): Milimetros {
  * Forma canônica de um nome para casamento entre fontes (spec S6): minúsculas,
  * sem acentos, sem pontuação, espaços colapsados.
  *
- * @example normalizarNome('Terra Mystica: Fogo & Gelo') // 'terra mystica fogo gelo'
+ * Usa NFKD e não NFD porque os indicadores ordinais `ª` e `º` não têm decomposição
+ * canônica — só a de compatibilidade os reduz a `a` e `o`. Sem isso, "2ª edição"
+ * da Ludopedia nunca casaria com "2a edicao" de uma planilha, e a falha seria
+ * silenciosa.
+ *
+ * @example normalizarNome('Descent 2ª Edição') // 'descent 2a edicao'
  */
 export function normalizarNome(nome: string): string {
   return nome
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
