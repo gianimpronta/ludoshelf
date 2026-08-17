@@ -3034,6 +3034,55 @@ Esperado: `## main...origin/main` sem divergência.
 persistência (§5.3), importador de CSV (§9.3), tabela semeada (§9.4), proxy e adaptadores
 (§9.2), tratamento de erros de rede (§10).
 
+## Desvios entre o plano e o que foi implementado
+
+Executado em 2026-08-16/17. O código é a fonte de verdade; este registro existe para
+quem for escrever os planos 2 a 4 não partir de premissas falsas.
+
+**Defeitos do próprio plano, encontrados durante a execução:**
+
+1. **`normalizarNome` usava `NFD`** (Task 2). `NFD` não normaliza `ª` e `º`, que são letras
+   sem decomposição canônica. "2ª edição" da Ludopedia nunca casaria com "2a edição" de
+   planilha, em silêncio. Corrigido para `NFKD`, com testes de equivalência.
+2. **`montarEstante` não validava a definição** (Task 4). `alturaDaBaseMm` é acumulador: um
+   valor inválido contamina todos os compartimentos acima. Adicionada `exigirDistanciaValida`,
+   que aceita zero porque rodapé zero é uma estante encostada no chão.
+3. **`quantidade` de partidas entrava sem guarda** (Task 3). `NaN` viraria `NaN` no total, e
+   como toda comparação com `NaN` é `false`, a busca local pararia de aceitar melhorias sem
+   erro nem teste vermelho.
+4. **`agruparFamilias` aceitava ciclo e auto-referência** (Task 7). Produzia famílias
+   sobrepostas e membros repetidos, em silêncio. Corrigido exigindo `idJogoBase === null`
+   para ser base.
+5. **`medirFamiliaDividida` devolvia `-0`** (Task 9). `Object.is(-0, 0)` é `false` e a
+   interface mostraria "-0". Só nega quando há o que penalizar.
+6. **O critério "altura dos olhos" era cego a quem fica de fora** (Tasks 9 e 13). Normalizava
+   pelo peso dos jogos *posicionados*, produzindo uma média que mede só *onde* eles estão.
+   O teste do plano para "o que sobra é o menos jogado" passava por sorte da ordenação; com
+   a ordem de entrada invertida, o motor guardava o jogo nunca jogado e descartava o mais
+   jogado, violando a spec §11. Agora normaliza pelo peso da **coleção inteira**.
+7. **A busca local não tinha como agir sobre isso** (Task 11). Foram acrescentados dois
+   movimentos ausentes do plano: `alocarPendente`, aceito mesmo sem melhorar a pontuação
+   porque caber é restrição dura; e `trocarComPendente`, o único que desaloca alguém, sem o
+   qual quem fica na estante seria decidido pela ordem do first-fit e não pelos critérios.
+8. **O cenário de regressão era fisicamente impossível** (Task 15). Afirmava que doze jogos
+   cabiam numa Billy de 280 mm de profundidade; uma caixa quadrada de 295 mm não entra numa
+   prateleira de 280 mm — é exatamente por isso que colecionador usa Kallax. O cenário feliz
+   passou para 390 mm, e o fato virou um segundo cenário que fixa quais caixas são recusadas
+   por profundidade e que o motor informa os 15 mm que faltaram.
+
+**Ajustes de infraestrutura:**
+
+- `.prettierignore` (Task 1): sem ele `pnpm format:check` reprovava o lockfile e os
+  documentos já na primeira execução.
+- `app/tsconfig.json` declara `types: ["node"]` (Task 14): o teste de fronteira lê o
+  diretório do núcleo com `node:fs`, e sem isso o `typecheck` quebrava com os testes verdes.
+- `PONTUACAO_ZERADA` e `NomeDeTermo` extraídos para `arranjo.ts`, evitando repetir o literal
+  da pontuação neutra em três arquivos.
+- As contagens cumulativas de teste foram removidas: quebravam a cada teste acrescentado
+  numa task anterior e precisaram ser recalculadas três vezes.
+
+**Resultado:** 126 testes, `pnpm typecheck` limpo, `pnpm format:check` limpo.
+
 ## Itens conhecidos, deixados para a camada de importação (plano 3)
 
 Levantados durante a revisão deste plano e conscientemente adiados, porque o lugar certo de
