@@ -999,6 +999,17 @@ describe('encaixar', () => {
       faltaMm: 20,
     })
   })
+
+  it('recusa por profundidade quando a caixa cabe em altura mas nao no fundo', () => {
+    // Ambas as poses cabem na altura de 400; nenhuma cabe na profundidade de 200.
+    // Cobre o ramo em que `fundoNecessarioMm` usa `menorMm` em vez de `maiorMm`.
+    const medidas = criarMedidas(300, 220, 60, manual, true)
+    expect(encaixar(medidas, prateleira(400, 200))).toEqual({
+      cabe: false,
+      motivo: 'fundo-demais',
+      faltaMm: 20,
+    })
+  })
 })
 ```
 
@@ -1035,7 +1046,10 @@ export type ResultadoDeEncaixe =
  * @example encaixar(criarMedidas(300, 220, 60, origem, true), prateleira250)
  *          // { cabe: true, apoio: 'paisagem' }
  */
-export function encaixar(medidas: MedidasDaCaixa, compartimento: Compartimento): ResultadoDeEncaixe {
+export function encaixar(
+  medidas: MedidasDaCaixa,
+  compartimento: Compartimento,
+): ResultadoDeEncaixe {
   if (medidas.espessuraMm > compartimento.larguraUtilMm) {
     return recusa('largo-demais', medidas.espessuraMm - compartimento.larguraUtilMm)
   }
