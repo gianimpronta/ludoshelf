@@ -1338,9 +1338,11 @@ export interface JogoNaoAlocado {
   readonly faltaMm: Milimetros
 }
 
+export type NomeDeTermo = 'sobraConcentrada' | 'familiaDividida' | 'alturaDosOlhos'
+
 export interface Pontuacao {
   readonly total: number
-  readonly porTermo: Readonly<Record<'sobraConcentrada' | 'familiaDividida' | 'alturaDosOlhos', number>>
+  readonly porTermo: Readonly<Record<NomeDeTermo, number>>
 }
 
 export interface Arranjo {
@@ -1391,7 +1393,16 @@ export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compart
   }
   return compartimento
 }
+
+/** Pontuação neutra, usada antes de o motor pontuar de verdade. */
+export const PONTUACAO_ZERADA: Pontuacao = {
+  total: 0,
+  porTermo: { sobraConcentrada: 0, familiaDividida: 0, alturaDosOlhos: 0 },
+}
 ```
+
+`PONTUACAO_ZERADA` e `NomeDeTermo` existem para as Tasks 10 e 11 não repetirem o literal
+`{ total: 0, porTermo: { ... } }` em três arquivos. Use-os no lugar do literal.
 
 - [ ] **Step 4: Rodar os testes**
 
