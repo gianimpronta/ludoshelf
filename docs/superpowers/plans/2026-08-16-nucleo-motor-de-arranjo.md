@@ -2872,3 +2872,17 @@ Esperado: `## main...origin/main` sem divergência.
 **Fora deste plano, por pertencerem aos planos 2 a 4:** telas (§8), cena 3D (§8),
 persistência (§5.3), importador de CSV (§9.3), tabela semeada (§9.4), proxy e adaptadores
 (§9.2), tratamento de erros de rede (§10).
+
+## Itens conhecidos, deixados para a camada de importação (plano 3)
+
+Levantados durante a revisão deste plano e conscientemente adiados, porque o lugar certo de
+tratá-los é onde o dado externo entra, não no núcleo:
+
+- **`™` sobrevive à normalização.** `NFKD` decompõe `™` (U+2122) nas letras `T` e `M`, que
+  passam pelo filtro `\p{Letter}`. Logo `normalizarNome('Catan™')` devolve `'catantm'` e não
+  casa com `'catan'`. `®` não tem esse problema. Não bloqueia porque Ludopedia, BGG e
+  exportações de CSV não trazem marca registrada no campo de nome — mas se aparecer, a
+  correção é remover `\p{So}` antes de normalizar, com teste de regressão.
+- **Nome vazio ou só de pontuação colapsa para `''`.** Dois itens sem nome real casariam
+  entre si. A validação pertence ao importador de CSV, que deve recusar a linha citando o
+  número dela, e não ao núcleo.
