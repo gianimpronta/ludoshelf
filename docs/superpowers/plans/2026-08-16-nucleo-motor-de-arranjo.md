@@ -397,7 +397,7 @@ rm app/src/nucleo/fundacao.test.ts
 pnpm test
 ```
 
-Esperado: `Tests 11 passed (11)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 6: Commit**
 
@@ -549,7 +549,7 @@ export function pesoDeFrequencia(sinal: SinalDeFrequencia): number {
 pnpm test
 ```
 
-Esperado: `Tests 17 passed (17)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -604,9 +604,31 @@ describe('montarEstante', () => {
     expect(ids).toEqual(['e1-p0', 'e1-p1', 'e1-p2'])
   })
 
+  // Sem esta asserção, gravar alturaDoRodapeMm no lugar de alturaUtilMm passaria
+  // pelos outros cinco testes sem ninguém perceber.
+  it('carrega a altura livre de cada prateleira no compartimento certo', () => {
+    const alturas = montarEstante('e1', definicaoBase).compartimentos.map((c) => c.alturaUtilMm)
+    expect(alturas).toEqual([350, 350, 300])
+  })
+
   it('recusa estante sem prateleira nenhuma', () => {
     const vazia = { ...definicaoBase, alturasLivresMm: [] }
     expect(() => montarEstante('e1', vazia)).toThrow(/ao menos uma prateleira/)
+  })
+
+  it('aceita rodape zero, que e uma estante encostada no chao', () => {
+    const noChao = { ...definicaoBase, alturaDoRodapeMm: 0 }
+    expect(montarEstante('e1', noChao).compartimentos[0]?.alturaDaBaseMm).toBe(0)
+  })
+
+  it('recusa altura livre nao finita citando o indice', () => {
+    const suja = { ...definicaoBase, alturasLivresMm: [350, Number.NaN, 300] }
+    expect(() => montarEstante('e1', suja)).toThrow(/alturasLivresMm\[1\]/)
+  })
+
+  it('recusa rodape negativo', () => {
+    const invertida = { ...definicaoBase, alturaDoRodapeMm: -10 }
+    expect(() => montarEstante('e1', invertida)).toThrow(/alturaDoRodapeMm.*recebido: -10/)
   })
 })
 ```
@@ -623,8 +645,31 @@ Esperado: FAIL com `Failed to resolve import "./estante.js"`.
 
 `app/src/nucleo/estante.ts`:
 
+Antes, acrescente ao final de `app/src/nucleo/medidas.ts` a guarda que aceita zero —
+`exigirMedidaValida` exige `> 0`, e rodapé zero é uma estante encostada no chão:
+
 ```ts
-import type { Milimetros } from './medidas.js'
+/**
+ * Falha se o valor não puder ser uma distância. Diferente de `exigirMedidaValida`,
+ * aceita zero: rodapé zero é uma estante encostada no chão, que é real.
+ *
+ * @example exigirDistanciaValida(0, 'alturaDoRodapeMm')
+ */
+export function exigirDistanciaValida(valor: number, campo: string): void {
+  if (!Number.isFinite(valor) || valor < 0) {
+    throw new RangeError(
+      `${campo} deve ser um número finito não negativo; recebido: ${JSON.stringify(valor)}`,
+    )
+  }
+}
+```
+
+Com dois testes em `medidas.test.ts`: aceita zero, e recusa negativo citando campo e valor.
+
+`app/src/nucleo/estante.ts`:
+
+```ts
+import { exigirDistanciaValida, exigirMedidaValida, type Milimetros } from './medidas.js'
 
 /**
  * Um espaço fechado onde caixas podem ser postas. Prateleira corrida é o caso em que
@@ -672,6 +717,7 @@ export function montarEstante(id: string, definicao: DefinicaoDeEstante): Estant
         `recebido alturasLivresMm: []`,
     )
   }
+  validarDefinicao(definicao)
   return {
     id,
     nome: definicao.nome,
@@ -679,6 +725,21 @@ export function montarEstante(id: string, definicao: DefinicaoDeEstante): Estant
     espessuraDaPrateleiraMm: definicao.espessuraDaPrateleiraMm,
     compartimentos: derivarCompartimentos(id, definicao),
   }
+}
+
+/**
+ * Valida na entrada porque `alturaDaBaseMm` é um acumulador: um valor inválido em
+ * qualquer prateleira se propaga para todas as de cima, e o sintoma só apareceria
+ * lá na frente, no critério "altura dos olhos", longe da causa.
+ */
+function validarDefinicao(definicao: DefinicaoDeEstante): void {
+  exigirMedidaValida(definicao.larguraUtilMm, 'larguraUtilMm')
+  exigirMedidaValida(definicao.profundidadeUtilMm, 'profundidadeUtilMm')
+  exigirDistanciaValida(definicao.alturaDoRodapeMm, 'alturaDoRodapeMm')
+  exigirDistanciaValida(definicao.espessuraDaPrateleiraMm, 'espessuraDaPrateleiraMm')
+  definicao.alturasLivresMm.forEach((altura, indice) =>
+    exigirMedidaValida(altura, `alturasLivresMm[${indice}]`),
+  )
 }
 
 function derivarCompartimentos(
@@ -707,7 +768,7 @@ function derivarCompartimentos(
 pnpm test
 ```
 
-Esperado: `Tests 22 passed (22)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -849,7 +910,7 @@ export function sortearIndice(gerador: Gerador, tamanho: number): number {
 pnpm test
 ```
 
-Esperado: `Tests 28 passed (28)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1029,7 +1090,7 @@ function recusa(motivo: MotivoDeRecusa, faltaMm: Milimetros): ResultadoDeEncaixe
 pnpm test
 ```
 
-Esperado: `Tests 34 passed (34)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1163,7 +1224,7 @@ export function agruparFamilias(jogos: readonly CaixaDeJogo[]): readonly Familia
 pnpm test
 ```
 
-Esperado: `Tests 40 passed (40)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1324,7 +1385,7 @@ export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compart
 pnpm test
 ```
 
-Esperado: `Tests 43 passed (43)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -1663,7 +1724,7 @@ function medirAlturaDosOlhos(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
 pnpm test
 ```
 
-Esperado: `Tests 56 passed (56)` — 43 anteriores, mais 3 do guard de `quantidade` no Step 3
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo — 43 anteriores, mais 3 do guard de `quantidade` no Step 3
 e 10 da pontuação.
 
 - [ ] **Step 6: Commit**
@@ -1974,7 +2035,7 @@ function diagnosticar(
 pnpm test
 ```
 
-Esperado: `Tests 62 passed (62)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -2297,7 +2358,7 @@ function sortearCompartimentoOcupado(
 pnpm test
 ```
 
-Esperado: `Tests 67 passed (67)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -2482,7 +2543,7 @@ function reposicionar(
 pnpm test
 ```
 
-Esperado: `Tests 71 passed (71)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 - [ ] **Step 5: Commit**
 
@@ -2637,7 +2698,7 @@ export function arranjar(entrada: EntradaDoMotor): Arranjo {
 pnpm test
 ```
 
-Esperado: `Tests 76 passed (76)`.
+Esperado: a suite inteira verde, incluindo os testes novos deste arquivo.
 
 Se o teste "o que sobra é o menos jogado" falhar, aumente `iteracoes` para `20000` na
 função `arranjarCom` do teste antes de mexer no algoritmo: o FFD inicial ordena por
