@@ -61,14 +61,32 @@ export function criarMedidas(
   }
 }
 
-/** Converte o sinal de frequência no número que a pontuação usa. */
+/**
+ * Converte o sinal de frequência no número que a pontuação usa.
+ *
+ * Valida `quantidade` porque ela vem de CSV e da API da Ludopedia: `NaN` ou
+ * `Infinity` aqui viram `NaN` no total da pontuação, e aí toda comparação da busca
+ * local devolve `false` — o otimizador para de melhorar sem acusar nada.
+ *
+ * @example pesoDeFrequencia({ tipo: 'partidas', quantidade: 12 }) // 12
+ */
 export function pesoDeFrequencia(sinal: SinalDeFrequencia): number {
   switch (sinal.tipo) {
     case 'desconhecida':
       return 0
     case 'partidas':
-      return sinal.quantidade
+      return exigirQuantidadeValida(sinal.quantidade)
     case 'destaque':
       return PESO_DE_DESTAQUE
   }
+}
+
+function exigirQuantidadeValida(quantidade: number): number {
+  if (!Number.isFinite(quantidade) || quantidade < 0) {
+    throw new RangeError(
+      `quantidade de partidas deve ser um número finito não negativo; ` +
+        `recebido: ${JSON.stringify(quantidade)}`,
+    )
+  }
+  return quantidade
 }

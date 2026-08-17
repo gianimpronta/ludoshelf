@@ -30,4 +30,18 @@ describe('pesoDeFrequencia', () => {
   it('trata destaque como prioridade fixa, não como estatística', () => {
     expect(pesoDeFrequencia({ tipo: 'destaque', marcadoPeloUsuario: true })).toBe(PESO_DE_DESTAQUE)
   })
+
+  it('aceita zero partidas, que e dado e nao ausencia de dado', () => {
+    expect(pesoDeFrequencia({ tipo: 'partidas', quantidade: 0 })).toBe(0)
+  })
+
+  it('recusa quantidade nao finita citando o valor recebido', () => {
+    expect(() => pesoDeFrequencia({ tipo: 'partidas', quantidade: Number.NaN })).toThrow(
+      /recebido: null/,
+    )
+  })
+
+  it('recusa quantidade negativa', () => {
+    expect(() => pesoDeFrequencia({ tipo: 'partidas', quantidade: -1 })).toThrow(/recebido: -1/)
+  })
 })
