@@ -102,15 +102,28 @@ function medirFamiliaDividida(arranjo: Arranjo, ctx: ContextoDeArranjo): number 
   return divididas === 0 ? 0 : -divididas
 }
 
-/** Média do conforto ponderada pela frequência. Zero quando não há sinal nenhum. */
+/**
+ * Conforto ponderado pela frequência, normalizado pelo peso da **coleção inteira** e
+ * não só dos jogos posicionados.
+ *
+ * A diferença importa: normalizar pelos posicionados produz uma média que mede
+ * apenas *onde* eles estão e é cega para *quais* são — trocar um jogo nunca jogado
+ * por um muito jogado não mexeria no valor. Normalizando pela coleção, deixar um
+ * jogo muito jogado de fora custa pontos, que é o que a spec §11 exige.
+ */
 function medirAlturaDosOlhos(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
-  let pesoTotal = 0
+  const pesoDaColecao = somarPesos([...ctx.jogosPorId.values()])
+  if (pesoDaColecao === 0) return 0
+
   let acumulado = 0
   for (const posicao of arranjo.posicoes) {
     const peso = pesoDeFrequencia(exigirJogo(ctx, posicao.idJogo).frequencia)
     if (peso === 0) continue
-    pesoTotal += peso
     acumulado += peso * conforto(exigirCompartimento(ctx, posicao.idCompartimento).alturaDaBaseMm)
   }
-  return pesoTotal === 0 ? 0 : acumulado / pesoTotal
+  return acumulado / pesoDaColecao
+}
+
+function somarPesos(jogos: readonly CaixaDeJogo[]): number {
+  return jogos.reduce((total, jogo) => total + pesoDeFrequencia(jogo.frequencia), 0)
 }

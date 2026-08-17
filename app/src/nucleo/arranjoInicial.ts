@@ -114,7 +114,7 @@ function inserirMembroSozinho(
   const unidade: Unidade = { membros: [membro], espessuraTotalMm: membro.medidas.espessuraMm }
   const destino = acharCompartimentoParaUnidade(unidade, ctx, livre)
   if (destino === null) {
-    naoAlocados.push(diagnosticar(membro, ctx, livre))
+    naoAlocados.push(diagnosticarNaoAlocado(membro, ctx, livre))
     return
   }
   inserirMembros([membro], destino, livre, posicoes)
@@ -124,8 +124,13 @@ function inserirMembroSozinho(
  * Explica por que o jogo ficou de fora. Se ele caberia dimensionalmente em algum
  * compartimento, o problema é largura ocupada — `sem-espaco`, com a menor falta.
  * Caso contrário, devolve a recusa dimensional menos severa.
+ *
+ * Exportada porque a busca local também desaloca jogos ao trocá-los por pendentes,
+ * e o motivo tem de ser recalculado do mesmo jeito.
+ *
+ * @example diagnosticarNaoAlocado(jogo, ctx, livre) // { motivo: 'sem-espaco', faltaMm: 41 }
  */
-function diagnosticar(
+export function diagnosticarNaoAlocado(
   membro: CaixaDeJogo,
   ctx: ContextoDeArranjo,
   livre: ReadonlyMap<string, Milimetros>,

@@ -7,6 +7,7 @@ import {
   type JogoNaoAlocado,
   type PosicaoDeJogo,
 } from './arranjo.js'
+import { diagnosticarNaoAlocado } from './arranjoInicial.js'
 import { encaixar } from './encaixe.js'
 import { sortearIndice, type Gerador } from './gerador.js'
 import type { IdJogo } from './jogo.js'
@@ -28,7 +29,8 @@ type Movimento = (estado: Estado, ctx: ContextoDeArranjo, gerador: Gerador) => E
  * subir — com uma exceção: alocar um jogo que estava de fora é sempre aceito,
  * porque "caber" é restrição dura e fica fora da pontuação (spec §7.4).
  *
- * Nenhum movimento desaloca um jogo, então a viabilidade nunca piora.
+ * A quantidade de jogos posicionados nunca diminui: os movimentos ou a mantêm, ou
+ * a aumentam. `trocarComPendente` troca um por outro, o que a preserva.
  *
  * @example melhorar(inicial, ctx, PESOS_PADRAO, geradorMulberry32(42), 20000)
  */
@@ -95,7 +97,7 @@ function sortearMovimento(estado: Estado, ctx: ContextoDeArranjo, gerador: Gerad
 function movimentosDisponiveis(estado: Estado, ctx: ContextoDeArranjo): readonly Movimento[] {
   const movimentos: Movimento[] = [moverUmJogo, trocarDoisJogos]
   if (ctx.familias.length > 0) movimentos.push(moverFamilia)
-  if (estado.naoAlocados.length > 0) movimentos.push(alocarPendente)
+  if (estado.naoAlocados.length > 0) movimentos.push(alocarPendente, trocarComPendente)
   return movimentos
 }
 
@@ -174,6 +176,47 @@ function alocarPendente(estado: Estado, ctx: ContextoDeArranjo, gerador: Gerador
     lotacao,
     naoAlocados: estado.naoAlocados.filter((outro) => outro.idJogo !== pendente.idJogo),
   }
+}
+
+/**
+ * Troca um jogo posicionado por um que ficou de fora. É o único movimento que
+ * desaloca alguém, e existe porque sem ele a escolha de quem fica na estante seria
+ * decidida pela ordem do first-fit e não pelos critérios: uma coleção que não cabe
+ * deixaria de fora um jogo arbitrário em vez do menos jogado (spec §11).
+ *
+ * Como não muda a quantidade de posicionados, só é aceito se a pontuação subir.
+ */
+function trocarComPendente(
+  estado: Estado,
+  ctx: ContextoDeArranjo,
+  gerador: Gerador,
+): Estado | null {
+  const pendente = estado.naoAlocados[sortearIndice(gerador, estado.naoAlocados.length)]
+  if (pendente === undefined) return null
+  const idCompartimento = sortearCompartimentoOcupado(estado.lotacao, ctx, gerador)
+  if (idCompartimento === null) return null
+
+  const ocupantes = estado.lotacao.get(idCompartimento) ?? []
+  const desalojado = ocupantes[sortearIndice(gerador, ocupantes.length)]
+  if (desalojado === undefined) return null
+  if (!podeReceber(idCompartimento, [pendente.idJogo], estado.lotacao, ctx, [desalojado])) {
+    return null
+  }
+
+  const lotacao = clonar(estado.lotacao)
+  lotacao.set(idCompartimento, [...ocupantes.filter((id) => id !== desalojado), pendente.idJogo])
+  const naoAlocados = [
+    ...estado.naoAlocados.filter((outro) => outro.idJogo !== pendente.idJogo),
+    diagnosticarNaoAlocado(exigirJogo(ctx, desalojado), ctx, larguraLivre(lotacao, ctx)),
+  ]
+  return { lotacao, naoAlocados }
+}
+
+/** Largura ainda livre em cada compartimento, derivada da lotação. */
+function larguraLivre(lotacao: Lotacao, ctx: ContextoDeArranjo): ReadonlyMap<string, Milimetros> {
+  return new Map(
+    ctx.compartimentos.map((c) => [c.id, c.larguraUtilMm - somar(lotacao.get(c.id) ?? [], ctx)]),
+  )
 }
 
 /** Verifica dimensões e largura restante, descontando quem sairá do compartimento. */
