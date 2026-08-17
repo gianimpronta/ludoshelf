@@ -151,8 +151,15 @@ interface CaixaDeJogo {
   readonly nome: string;
   readonly medidas: MedidasDaCaixa;
   readonly idJogoBase: IdJogo | null;        // expansão aponta para o base
-  readonly partidasRegistradas: number;      // 0 quando desconhecido
+  readonly frequencia: SinalDeFrequencia;
+  readonly idLudopedia: number | null;       // casamento com a API
+  readonly idBgg: number | null;
 }
+
+type SinalDeFrequencia =
+  | { tipo: 'desconhecida' }                 // distinto de "zero partidas"
+  | { tipo: 'partidas';  quantidade: number }
+  | { tipo: 'destaque';  marcadoPeloUsuario: true };
 
 interface MedidasDaCaixa {
   readonly maiorMm: Milimetros;              // maior face
@@ -190,6 +197,8 @@ interface Compartimento {
 interface Estante {
   readonly id: string;
   readonly nome: string;
+  readonly alturaDoRodapeMm: Milimetros;       // chão até a base da 1ª prateleira
+  readonly espessuraDaPrateleiraMm: Milimetros;
   readonly compartimentos: readonly Compartimento[];
 }
 ```
@@ -197,7 +206,17 @@ interface Estante {
 Prateleira corrida = N compartimentos, cada um com a largura cheia da estante. Kallax
 futuro = grade de compartimentos pequenos. Mesmo motor.
 
-`alturaDaBaseMm` é o que permite calcular "altura dos olhos" sem gambiarra.
+`alturaDaBaseMm` é o que permite calcular "altura dos olhos" sem gambiarra, e é **derivado**
+na hora do cadastro, acumulando de baixo para cima:
+
+```
+alturaDaBase[0] = alturaDoRodapeMm
+alturaDaBase[i] = alturaDaBase[i-1] + alturaUtilMm[i-1] + espessuraDaPrateleiraMm
+```
+
+Por isso a tela de Estantes precisa coletar `alturaDoRodapeMm` e
+`espessuraDaPrateleiraMm` além das alturas livres — sem esses dois campos o critério
+"altura dos olhos" não tem como ser calculado (§8).
 
 ### 6.3 Resultado
 
@@ -296,11 +315,19 @@ testes de regressão apontarem qual termo mudou.
 |---|---|---|
 | Sobra concentrada | soma dos **quadrados** da largura livre por compartimento | o quadrado premia 60 cm livres num lugar sobre 15 cm em quatro |
 | Família dividida | penalidade × nº de famílias em compartimentos diferentes | alta, porém **finita**: cede se travar o encaixe, em vez de tornar o problema insolúvel |
-| Altura dos olhos | Σ (partidas registradas × conforto da altura da base) | conforto = 1,0 entre 1200 mm e 1650 mm, caindo para as pontas |
+| Altura dos olhos | Σ (peso de frequência × conforto da altura da base) | conforto = 1,0 entre 1200 mm e 1650 mm, caindo para as pontas |
 | Alfabética | não pontuada | é ordenação final, custo zero (§7.1, ponto 1) |
 
 Hierarquia efetiva: caber é restrição dura; família junta é penalidade forte e finita;
 sobra concentrada e altura dos olhos são termos ponderados; alfabética é apresentação.
+
+O peso de frequência sai de `SinalDeFrequencia` (§6.1): `partidas` usa a quantidade,
+`destaque` usa um valor fixo alto, `desconhecida` contribui zero. **Se toda a coleção
+estiver `desconhecida`, o termo inteiro vira zero e o critério deixa de existir sem que
+ninguém perceba.** Para evitar isso, a UI detecta esse estado e avisa explicitamente que o
+critério está inativo por falta de sinal, oferecendo os dois caminhos de §9.3 e §8 —
+coluna de partidas no CSV ou marcação manual de destaques. O critério não depende do token
+da Ludopedia.
 
 O gerador aleatório da busca local entra **injetado** (`Gerador`), nunca `Math.random`
 global — sem isso os testes não são repetíveis, e sem repetibilidade não há como afirmar
@@ -313,8 +340,14 @@ na thread principal. Web Worker fica fora do v1; entra se a medição mostrar ne
 
 ## 8. Visualização 3D e telas
 
-Três telas: **Estantes** (largura e profundidade internas, lista de alturas de prateleira),
-**Coleção** (jogos, medidas, procedência, as quatro vias de entrada) e **Arranjo**.
+Três telas:
+
+- **Estantes** — largura e profundidade internas, altura do rodapé, espessura da prateleira
+  e a lista de alturas livres. Os dois campos do meio existem para derivar
+  `alturaDaBaseMm` (§6.2); sem eles o critério "altura dos olhos" não funciona.
+- **Coleção** — jogos, medidas e procedência, as quatro vias de entrada, e a marcação
+  manual de **destaques**, que é o caminho token-free para alimentar o sinal de frequência.
+- **Arranjo** — a visualização 3D descrita abaixo.
 
 A cena 3D recebe o `Arranjo` pronto e desenha. Não decide nada; não há física nem colisão
 em tempo real, porque a validação já ocorreu no motor.
@@ -364,8 +397,22 @@ edição. Auto-aceitar a primeira é como o app passaria a mentir sobre as caixa
 
 Genérico, com mapeamento de colunas na UI: o app lê o cabeçalho, mostra as colunas
 encontradas e o usuário indica qual é nome, maior, menor, espessura e, opcionalmente,
-unidade e jogo-base. Um template para download acompanha. Cobre o export da Ludopedia, o
-export de coleção do BGG e planilha própria sem um parser por formato.
+unidade, **jogo-base** e **partidas**. Um template para download acompanha. Cobre o export
+da Ludopedia, o export de coleção do BGG e planilha própria sem um parser por formato.
+
+As colunas opcionais `jogo-base` e `partidas` são o que torna os critérios "família junta"
+e "altura dos olhos" independentes do token da Ludopedia.
+
+**Resolução de parentesco.** A coluna `jogo-base` traz um **nome**, não um id. A regra:
+normaliza o nome e casa contra a coleção já existente; casou, grava o `IdJogo`
+correspondente. Não casou, o jogo é importado com `idJogoBase: null` e a pendência entra no
+relatório de importação como "jogo-base não encontrado: `<valor>`" — nunca é descartada em
+silêncio.
+
+O mesmo vale para o cruzamento entre fontes: `idLudopedia` e `idBgg` (§6.1) guardam os
+identificadores externos, e uma linha de CSV casa com um jogo já importado da Ludopedia por
+nome normalizado, com confirmação (§10). Sem esses campos, "família junta" só funcionaria
+quando a coleção inteira viesse de uma única fonte.
 
 XLSX fica fora do v1 — entra atrás da mesma interface `LeitorDePlanilha`, carregado sob
 demanda, se vier a ser pedido.
@@ -400,6 +447,9 @@ que torna auditável a restrição de não povoar a tabela com dados extraídos 
 | Token ausente ou inválido | integração desligada na UI com o motivo escrito; app segue com manual, CSV e semeada |
 | BGG responde `202 Accepted` | retry com recuo exponencial, teto de tentativas, depois "indisponível agora" |
 | BGG limita a taxa (`429`) | fila serializada no proxy, com espaçamento mínimo entre chamadas |
+| Ludopedia limita a taxa | mesma fila serializada. Relevante porque `/api/expansoes/:idBase` é uma chamada **por jogo-base** — ~150 chamadas numa coleção de 300 jogos |
+| Nenhum jogo tem sinal de frequência | a UI avisa que "altura dos olhos" está inativo e aponta os dois caminhos token-free (§9.3, §8), em vez de o termo zerar em silêncio |
+| Jogo-base do CSV não encontrado | jogo importado com `idJogoBase: null` e pendência listada no relatório de importação (§9.3) |
 | Medida `0` ou ausente no BGG | tratada como **ausente**, nunca como zero; o jogo cai na lista "faltando medida" |
 | Unidade ambígua no CSV | coluna de unidade explícita; sem ela, heurística (valor < 100 provavelmente cm) com confirmação do usuário |
 | Linha inválida no CSV | importação parcial e relatório linha a linha; nunca aborta o arquivo inteiro |
@@ -436,7 +486,7 @@ de regressão.
 
 | # | Risco | Mitigação |
 |---|---|---|
-| R1 | Tokens fora do controle do time: Ludopedia por e-mail a `api@ludopedia.com.br`, BGG por registro de aplicação. É o item de maior prazo do projeto. | Solicitar ambos imediatamente. Desenvolvimento segue contra fixtures gravadas e modo offline, então nada trava esperando resposta. |
+| R1 | Tokens fora do controle do time: Ludopedia por e-mail a `api@ludopedia.com.br`, BGG por registro de aplicação. É o item de maior prazo do projeto. | Solicitar ambos imediatamente. Desenvolvimento segue contra fixtures gravadas e modo offline. Além disso, **nenhum dos quatro critérios depende de token**: "família junta" e "altura dos olhos" têm caminho por CSV e por marcação manual (§9.3, §8). Sem token o app perde conveniência, não funcionalidade. |
 | R2 | Cobertura de medidas irregular e às vezes errada. | Quatro vias de entrada, precedência explícita (§9.1) e "faltando medida" visível na cena. |
 | R3 | Termos do BGG sobre cachear e redistribuir dados não verificados — a página de termos devolveu 403 do ambiente de desenvolvimento. | Até confirmação, a tabela semeada é povoada com medidas próprias e specs de fabricante, **não** com dados extraídos do BGG. Restrição cautelar, relaxável se os termos permitirem. |
 | R4 | Ambiguidade de edição no BGG. | O proxy devolve candidatas; a escolha é do usuário (§9.2). |
@@ -450,3 +500,9 @@ de regressão.
   adjacência na prática sem custo de restrição.
 - **S3** — Faixa de conforto para "altura dos olhos": 1200 mm a 1650 mm do chão.
 - **S4** — Coleção alvo entre 50 e 300 jogos. Acima disso, revisar §7.5.
+- **S5** — `SinalDeFrequencia.destaque` pesa como um número fixo alto em vez de uma
+  contagem real de partidas. Marcar um jogo como destaque é uma declaração de prioridade,
+  não uma estatística.
+- **S6** — Casamento entre fontes é feito por **nome normalizado** (minúsculas, sem
+  acentos, sem pontuação, espaços colapsados), sempre com confirmação do usuário. Não há
+  casamento automático por similaridade aproximada no v1.
