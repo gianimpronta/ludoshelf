@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { cmParaMm, exigirMedidaValida, normalizarNome, polegadasParaMm } from './medidas.js'
+import {
+  cmParaMm,
+  exigirDistanciaValida,
+  exigirMedidaValida,
+  normalizarNome,
+  polegadasParaMm,
+} from './medidas.js'
 
 describe('cmParaMm', () => {
   it('converte centímetros para milímetros inteiros', () => {
@@ -53,6 +59,18 @@ describe('exigirMedidaValida', () => {
   it('descreve o campo e o valor ofensor', () => {
     expect(() => exigirMedidaValida(Number.NaN, 'espessuraMm')).toThrow(
       /espessuraMm.*recebido: null/,
+    )
+  })
+})
+
+describe('exigirDistanciaValida', () => {
+  it('aceita zero', () => {
+    expect(() => exigirDistanciaValida(0, 'alturaDoRodapeMm')).not.toThrow()
+  })
+
+  it('recusa negativo citando campo e valor', () => {
+    expect(() => exigirDistanciaValida(-5, 'alturaDoRodapeMm')).toThrow(
+      /alturaDoRodapeMm.*recebido: -5/,
     )
   })
 })

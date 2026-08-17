@@ -18,6 +18,20 @@ export function exigirMedidaValida(valor: number, campo: string): void {
 }
 
 /**
+ * Falha se o valor não puder ser uma distância. Diferente de `exigirMedidaValida`,
+ * aceita zero: rodapé zero é uma estante encostada no chão, que é real.
+ *
+ * @example exigirDistanciaValida(0, 'alturaDoRodapeMm')
+ */
+export function exigirDistanciaValida(valor: number, campo: string): void {
+  if (!Number.isFinite(valor) || valor < 0) {
+    throw new RangeError(
+      `${campo} deve ser um número finito não negativo; recebido: ${JSON.stringify(valor)}`,
+    )
+  }
+}
+
+/**
  * Converte centímetros para milímetros inteiros. Arredonda de propósito: o inteiro
  * é a garantia contra o falso "cabe por 0,2 mm".
  *
