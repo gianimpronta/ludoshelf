@@ -1,4 +1,10 @@
 {
   "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // `tests/fronteira.test.ts` lê o próprio diretório do núcleo com `node:fs` para
+    // verificar a fronteira arquitetural. Sem isto o tsc não conhece os módulos node:
+    // nem `import.meta.url`, e `pnpm typecheck` quebra enquanto `pnpm test` passa.
+    "types": ["node"]
+  },
   "include": ["src", "tests"]
 }
