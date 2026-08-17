@@ -1,0 +1,26 @@
+# dependências
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+*.tsbuildinfo
+
+# segredos — os tokens da Ludopedia e do BGG nunca entram no repo
+.env
+.env.*
+!.env.example
+
+# sessões do companheiro visual do brainstorming
+.superpowers/
+
+# editores e SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# cobertura e cache de teste
+coverage/
+.vitest/
