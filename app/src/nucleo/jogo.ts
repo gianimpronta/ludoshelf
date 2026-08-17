@@ -1,4 +1,4 @@
-import { exigirMedidaValida, type Milimetros } from './medidas.js'
+import { exigirMilimetroValido, type Milimetros } from './medidas.js'
 
 export type IdJogo = string
 
@@ -49,9 +49,9 @@ export function criarMedidas(
   origem: OrigemDaMedida,
   confirmadaPeloUsuario: boolean,
 ): MedidasDaCaixa {
-  exigirMedidaValida(ladoA, 'ladoA')
-  exigirMedidaValida(ladoB, 'ladoB')
-  exigirMedidaValida(espessuraMm, 'espessuraMm')
+  exigirMilimetroValido(ladoA, 'ladoA')
+  exigirMilimetroValido(ladoB, 'ladoB')
+  exigirMilimetroValido(espessuraMm, 'espessuraMm')
   return {
     maiorMm: Math.max(ladoA, ladoB),
     menorMm: Math.min(ladoA, ladoB),

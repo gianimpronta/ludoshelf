@@ -5,9 +5,12 @@ const MM_POR_CM = 10
 const MM_POR_POLEGADA = 25.4
 
 /**
- * Falha se o valor não puder ser uma medida física.
+ * Falha se o valor não puder ser uma medida física. Aceita fração de propósito:
+ * também valida centímetros e polegadas brutos, antes da conversão para
+ * milímetro inteiro (`cmParaMm`, `polegadasParaMm`) — exigir inteiro aqui
+ * quebraria essas duas conversões.
  *
- * @example exigirMedidaValida(295, 'maiorMm')
+ * @example exigirMedidaValida(29.5, 'centimetros')
  */
 export function exigirMedidaValida(valor: number, campo: string): void {
   if (!Number.isFinite(valor) || valor <= 0) {
@@ -19,7 +22,10 @@ export function exigirMedidaValida(valor: number, campo: string): void {
 
 /**
  * Falha se o valor não puder ser uma distância. Diferente de `exigirMedidaValida`,
- * aceita zero: rodapé zero é uma estante encostada no chão, que é real.
+ * aceita zero: rodapé zero é uma estante encostada no chão, que é real. Diferente
+ * de `exigirMilimetroValido`, esta ainda não pede inteiro — quem chama já está
+ * dentro do domínio de milímetro e deve compor com `exigirMilimetroValido` quando
+ * a integralidade importar.
  *
  * @example exigirDistanciaValida(0, 'alturaDoRodapeMm')
  */
@@ -27,6 +33,23 @@ export function exigirDistanciaValida(valor: number, campo: string): void {
   if (!Number.isFinite(valor) || valor < 0) {
     throw new RangeError(
       `${campo} deve ser um número finito não negativo; recebido: ${JSON.stringify(valor)}`,
+    )
+  }
+}
+
+/**
+ * Falha se o valor não for um milímetro inteiro positivo válido. Milímetro
+ * inteiro é a única unidade interna (spec §4, D9); só a borda — `cmParaMm`,
+ * `polegadasParaMm` — trabalha com fração, e é por isso que este validador não
+ * é o mesmo que `exigirMedidaValida`.
+ *
+ * @example exigirMilimetroValido(295, 'maiorMm')
+ */
+export function exigirMilimetroValido(valor: number, campo: string): void {
+  exigirMedidaValida(valor, campo)
+  if (!Number.isInteger(valor)) {
+    throw new RangeError(
+      `${campo} deve ser um número inteiro de milímetros; recebido: ${JSON.stringify(valor)}`,
     )
   }
 }

@@ -16,6 +16,16 @@ describe('criarMedidas', () => {
   it('recusa medida inválida citando o campo', () => {
     expect(() => criarMedidas(295, 295, 0, { tipo: 'manual' }, true)).toThrow(/espessuraMm/)
   })
+
+  // Milímetro inteiro é a única unidade interna (spec §4, D9). Sem esta recusa,
+  // um chamador que pulasse cmParaMm/polegadasParaMm poderia gravar fração de
+  // milímetro direto na coleção, e o encaixe passaria a depender de uma precisão
+  // que a UI e os testes não esperam.
+  it('recusa fracao de milimetro em qualquer lado', () => {
+    expect(() => criarMedidas(295.5, 220, 70, { tipo: 'manual' }, true)).toThrow(/ladoA/)
+    expect(() => criarMedidas(295, 220.5, 70, { tipo: 'manual' }, true)).toThrow(/ladoB/)
+    expect(() => criarMedidas(295, 220, 70.5, { tipo: 'manual' }, true)).toThrow(/espessuraMm/)
+  })
 })
 
 describe('pesoDeFrequencia', () => {

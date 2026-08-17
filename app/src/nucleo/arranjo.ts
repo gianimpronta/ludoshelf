@@ -50,24 +50,42 @@ export interface ContextoDeArranjo {
  */
 export function montarContexto(jogos: readonly CaixaDeJogo[], estante: Estante): ContextoDeArranjo {
   return {
-    jogosPorId: new Map(jogos.map((jogo) => [jogo.id, jogo])),
-    compartimentosPorId: new Map(estante.compartimentos.map((c) => [c.id, c])),
+    jogosPorId: indexarPorId(jogos),
+    compartimentosPorId: new Map(
+      estante.compartimentos.map((compartimento) => [compartimento.id, compartimento]),
+    ),
     compartimentos: estante.compartimentos,
     familias: agruparFamilias(jogos),
   }
 }
 
+/**
+ * `new Map` mantém só a última entrada de um id repetido, o que faria pesquisas
+ * futuras usarem as medidas e a frequência de um jogo diferente sob o mesmo id.
+ * Falha alto para não deixar essa colisão passar em silêncio.
+ */
+function indexarPorId(jogos: readonly CaixaDeJogo[]): ReadonlyMap<IdJogo, CaixaDeJogo> {
+  const porId = new Map<IdJogo, CaixaDeJogo>()
+  for (const jogo of jogos) {
+    if (porId.has(jogo.id)) {
+      throw new RangeError(`id de jogo duplicado; recebido: ${JSON.stringify(jogo.id)}`)
+    }
+    porId.set(jogo.id, jogo)
+  }
+  return porId
+}
+
 /** Falha alto: um id ausente aqui é defeito de programação, não entrada do usuário. */
-export function exigirJogo(ctx: ContextoDeArranjo, id: IdJogo): CaixaDeJogo {
-  const jogo = ctx.jogosPorId.get(id)
+export function exigirJogo(contexto: ContextoDeArranjo, id: IdJogo): CaixaDeJogo {
+  const jogo = contexto.jogosPorId.get(id)
   if (jogo === undefined) {
     throw new Error(`jogo ausente no contexto; recebido id: ${JSON.stringify(id)}`)
   }
   return jogo
 }
 
-export function exigirCompartimento(ctx: ContextoDeArranjo, id: string): Compartimento {
-  const compartimento = ctx.compartimentosPorId.get(id)
+export function exigirCompartimento(contexto: ContextoDeArranjo, id: string): Compartimento {
+  const compartimento = contexto.compartimentosPorId.get(id)
   if (compartimento === undefined) {
     throw new Error(`compartimento ausente no contexto; recebido id: ${JSON.stringify(id)}`)
   }

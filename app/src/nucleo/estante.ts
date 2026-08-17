@@ -1,4 +1,4 @@
-import { exigirDistanciaValida, exigirMedidaValida, type Milimetros } from './medidas.js'
+import { exigirDistanciaValida, exigirMilimetroValido, type Milimetros } from './medidas.js'
 
 /**
  * Um espaço fechado onde caixas podem ser postas. Prateleira corrida é o caso em que
@@ -62,12 +62,15 @@ export function montarEstante(id: string, definicao: DefinicaoDeEstante): Estant
  * lá na frente, no critério "altura dos olhos", longe da causa.
  */
 function validarDefinicao(definicao: DefinicaoDeEstante): void {
-  exigirMedidaValida(definicao.larguraUtilMm, 'larguraUtilMm')
-  exigirMedidaValida(definicao.profundidadeUtilMm, 'profundidadeUtilMm')
+  exigirMilimetroValido(definicao.larguraUtilMm, 'larguraUtilMm')
+  exigirMilimetroValido(definicao.profundidadeUtilMm, 'profundidadeUtilMm')
   exigirDistanciaValida(definicao.alturaDoRodapeMm, 'alturaDoRodapeMm')
-  exigirDistanciaValida(definicao.espessuraDaPrateleiraMm, 'espessuraDaPrateleiraMm')
+  // A espessura da prateleira, diferente do rodapé, não aceita zero: uma
+  // prateleira física sempre ocupa algum espaço, e é ela quem separa um
+  // compartimento do de cima na acumulação de alturaDaBaseMm.
+  exigirMilimetroValido(definicao.espessuraDaPrateleiraMm, 'espessuraDaPrateleiraMm')
   definicao.alturasLivresMm.forEach((altura, indice) =>
-    exigirMedidaValida(altura, `alturasLivresMm[${indice}]`),
+    exigirMilimetroValido(altura, `alturasLivresMm[${indice}]`),
   )
 }
 

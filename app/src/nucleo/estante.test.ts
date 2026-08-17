@@ -16,7 +16,9 @@ describe('montarEstante', () => {
   })
 
   it('acumula a altura da base de baixo para cima somando prateleira e vao', () => {
-    const bases = montarEstante('e1', definicaoBase).compartimentos.map((c) => c.alturaDaBaseMm)
+    const bases = montarEstante('e1', definicaoBase).compartimentos.map(
+      (compartimento) => compartimento.alturaDaBaseMm,
+    )
     expect(bases).toEqual([80, 448, 816])
   })
 
@@ -27,14 +29,18 @@ describe('montarEstante', () => {
   })
 
   it('gera identificadores estaveis e previsiveis', () => {
-    const ids = montarEstante('e1', definicaoBase).compartimentos.map((c) => c.id)
+    const ids = montarEstante('e1', definicaoBase).compartimentos.map(
+      (compartimento) => compartimento.id,
+    )
     expect(ids).toEqual(['e1-p0', 'e1-p1', 'e1-p2'])
   })
 
   // Sem esta asserção, gravar alturaDoRodapeMm no lugar de alturaUtilMm passaria
   // pelos outros cinco testes sem ninguém perceber.
   it('carrega a altura livre de cada prateleira no compartimento certo', () => {
-    const alturas = montarEstante('e1', definicaoBase).compartimentos.map((c) => c.alturaUtilMm)
+    const alturas = montarEstante('e1', definicaoBase).compartimentos.map(
+      (compartimento) => compartimento.alturaUtilMm,
+    )
     expect(alturas).toEqual([350, 350, 300])
   })
 
@@ -56,5 +62,17 @@ describe('montarEstante', () => {
   it('recusa rodape negativo', () => {
     const invertida = { ...definicaoBase, alturaDoRodapeMm: -10 }
     expect(() => montarEstante('e1', invertida)).toThrow(/alturaDoRodapeMm.*recebido: -10/)
+  })
+
+  // Diferente do rodapé, a espessura da prateleira não aceita zero: uma
+  // prateleira física sempre ocupa algum espaço.
+  it('recusa espessura da prateleira igual a zero', () => {
+    const semEspessura = { ...definicaoBase, espessuraDaPrateleiraMm: 0 }
+    expect(() => montarEstante('e1', semEspessura)).toThrow(/espessuraDaPrateleiraMm/)
+  })
+
+  it('recusa largura util fracionaria', () => {
+    const fracionaria = { ...definicaoBase, larguraUtilMm: 760.5 }
+    expect(() => montarEstante('e1', fracionaria)).toThrow(/larguraUtilMm/)
   })
 })

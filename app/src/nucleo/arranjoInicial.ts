@@ -21,38 +21,41 @@ interface Unidade {
  * First-Fit Decreasing: unidades mais grossas primeiro, cada uma no primeiro
  * compartimento onde couber. A pontuação sai zerada — quem pontua é o motor.
  *
- * @example montarArranjoInicial(jogos, ctx).naoAlocados
+ * @example montarArranjoInicial(jogos, contexto).naoAlocados
  */
 export function montarArranjoInicial(
   jogos: readonly CaixaDeJogo[],
-  ctx: ContextoDeArranjo,
+  contexto: ContextoDeArranjo,
 ): Arranjo {
   const livrePorCompartimento = new Map(
-    ctx.compartimentos.map((c) => [c.id, c.larguraUtilMm as Milimetros]),
+    contexto.compartimentos.map((compartimento) => [
+      compartimento.id,
+      compartimento.larguraUtilMm as Milimetros,
+    ]),
   )
   const posicoes: PosicaoDeJogo[] = []
   const naoAlocados: JogoNaoAlocado[] = []
 
-  for (const unidade of montarUnidades(jogos, ctx)) {
-    const destino = acharCompartimentoParaUnidade(unidade, ctx, livrePorCompartimento)
+  for (const unidade of montarUnidades(jogos, contexto)) {
+    const destino = acharCompartimentoParaUnidade(unidade, contexto, livrePorCompartimento)
     if (destino !== null) {
       inserirMembros(unidade.membros, destino, livrePorCompartimento, posicoes)
       continue
     }
     for (const membro of unidade.membros) {
-      inserirMembroSozinho(membro, ctx, livrePorCompartimento, posicoes, naoAlocados)
+      inserirMembroSozinho(membro, contexto, livrePorCompartimento, posicoes, naoAlocados)
     }
   }
   return { posicoes, naoAlocados, pontuacao: PONTUACAO_ZERADA }
 }
 
 /** Famílias viram um bloco; o resto vira unidade de um. Ordena por espessura decrescente. */
-function montarUnidades(jogos: readonly CaixaDeJogo[], ctx: ContextoDeArranjo): Unidade[] {
+function montarUnidades(jogos: readonly CaixaDeJogo[], contexto: ContextoDeArranjo): Unidade[] {
   const emFamilia = new Set<IdJogo>()
   const unidades: Unidade[] = []
 
-  for (const familia of ctx.familias) {
-    const membros = familia.membros.map((id) => exigirJogo(ctx, id))
+  for (const familia of contexto.familias) {
+    const membros = familia.membros.map((id) => exigirJogo(contexto, id))
     membros.forEach((membro) => emFamilia.add(membro.id))
     unidades.push({ membros, espessuraTotalMm: somarEspessuras(membros) })
   }
@@ -60,7 +63,9 @@ function montarUnidades(jogos: readonly CaixaDeJogo[], ctx: ContextoDeArranjo): 
     if (emFamilia.has(jogo.id)) continue
     unidades.push({ membros: [jogo], espessuraTotalMm: jogo.medidas.espessuraMm })
   }
-  return unidades.sort((a, b) => b.espessuraTotalMm - a.espessuraTotalMm)
+  return unidades.sort(
+    (unidadeA, unidadeB) => unidadeB.espessuraTotalMm - unidadeA.espessuraTotalMm,
+  )
 }
 
 function somarEspessuras(membros: readonly CaixaDeJogo[]): Milimetros {
@@ -69,10 +74,10 @@ function somarEspessuras(membros: readonly CaixaDeJogo[]): Milimetros {
 
 function acharCompartimentoParaUnidade(
   unidade: Unidade,
-  ctx: ContextoDeArranjo,
+  contexto: ContextoDeArranjo,
   livre: ReadonlyMap<string, Milimetros>,
 ): Compartimento | null {
-  for (const compartimento of ctx.compartimentos) {
+  for (const compartimento of contexto.compartimentos) {
     const cabeDimensionalmente = unidade.membros.every(
       (membro) => encaixar(membro.medidas, compartimento).cabe,
     )
@@ -106,15 +111,15 @@ function inserirMembros(
 
 function inserirMembroSozinho(
   membro: CaixaDeJogo,
-  ctx: ContextoDeArranjo,
+  contexto: ContextoDeArranjo,
   livre: Map<string, Milimetros>,
   posicoes: PosicaoDeJogo[],
   naoAlocados: JogoNaoAlocado[],
 ): void {
   const unidade: Unidade = { membros: [membro], espessuraTotalMm: membro.medidas.espessuraMm }
-  const destino = acharCompartimentoParaUnidade(unidade, ctx, livre)
+  const destino = acharCompartimentoParaUnidade(unidade, contexto, livre)
   if (destino === null) {
-    naoAlocados.push(diagnosticarNaoAlocado(membro, ctx, livre))
+    naoAlocados.push(diagnosticarNaoAlocado(membro, contexto, livre))
     return
   }
   inserirMembros([membro], destino, livre, posicoes)
@@ -128,17 +133,22 @@ function inserirMembroSozinho(
  * Exportada porque a busca local também desaloca jogos ao trocá-los por pendentes,
  * e o motivo tem de ser recalculado do mesmo jeito.
  *
- * @example diagnosticarNaoAlocado(jogo, ctx, livre) // { motivo: 'sem-espaco', faltaMm: 41 }
+ * Pré-condição do chamador: o jogo realmente não cabe em compartimento nenhum da
+ * lotação atual. Se essa pré-condição for violada — o jogo cabe com folga em
+ * algum lugar —, a função falha alto em vez de devolver `sem-espaco` com
+ * `faltaMm` zero ou negativo, que mentiria sobre o motivo.
+ *
+ * @example diagnosticarNaoAlocado(jogo, contexto, livre) // { motivo: 'sem-espaco', faltaMm: 41 }
  */
 export function diagnosticarNaoAlocado(
   membro: CaixaDeJogo,
-  ctx: ContextoDeArranjo,
+  contexto: ContextoDeArranjo,
   livre: ReadonlyMap<string, Milimetros>,
 ): JogoNaoAlocado {
   let melhorRecusa: JogoNaoAlocado | null = null
   let menorFaltaDeEspaco: Milimetros | null = null
 
-  for (const compartimento of ctx.compartimentos) {
+  for (const compartimento of contexto.compartimentos) {
     const resultado = encaixar(membro.medidas, compartimento)
     if (resultado.cabe) {
       const falta = membro.medidas.espessuraMm - (livre.get(compartimento.id) ?? 0)
@@ -150,6 +160,12 @@ export function diagnosticarNaoAlocado(
     }
   }
   if (menorFaltaDeEspaco !== null) {
+    if (menorFaltaDeEspaco <= 0) {
+      throw new Error(
+        `pré-condição violada: o jogo ${membro.id} cabe com ${-menorFaltaDeEspaco}mm de ` +
+          'folga em algum compartimento, mas foi diagnosticado como não alocado',
+      )
+    }
     return { idJogo: membro.id, motivo: 'sem-espaco', faltaMm: menorFaltaDeEspaco }
   }
   if (melhorRecusa === null) {

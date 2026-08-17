@@ -56,13 +56,13 @@ describe('conforto', () => {
 
 describe('pontuar — sobra concentrada', () => {
   it('premia a sobra reunida num compartimento so', () => {
-    const ctx = montarContexto([jogo('a'), jogo('b')], estante)
+    const contexto = montarContexto([jogo('a'), jogo('b')], estante)
     const juntos = pontuar(
       arranjoCom([
         { idJogo: 'a', idCompartimento: 'e1-p0' },
         { idJogo: 'b', idCompartimento: 'e1-p0' },
       ]),
-      ctx,
+      contexto,
       PESOS_PADRAO,
     )
     const separados = pontuar(
@@ -70,7 +70,7 @@ describe('pontuar — sobra concentrada', () => {
         { idJogo: 'a', idCompartimento: 'e1-p0' },
         { idJogo: 'b', idCompartimento: 'e1-p1' },
       ]),
-      ctx,
+      contexto,
       PESOS_PADRAO,
     )
     expect(juntos.porTermo.sobraConcentrada).toBeGreaterThan(separados.porTermo.sobraConcentrada)
@@ -79,26 +79,26 @@ describe('pontuar — sobra concentrada', () => {
 
 describe('pontuar — familia dividida', () => {
   it('nao penaliza familia inteira no mesmo compartimento', () => {
-    const ctx = montarContexto([jogo('a'), jogo('b', 'a')], estante)
+    const contexto = montarContexto([jogo('a'), jogo('b', 'a')], estante)
     const pontuacao = pontuar(
       arranjoCom([
         { idJogo: 'a', idCompartimento: 'e1-p0' },
         { idJogo: 'b', idCompartimento: 'e1-p0' },
       ]),
-      ctx,
+      contexto,
       PESOS_PADRAO,
     )
     expect(pontuacao.porTermo.familiaDividida).toBe(0)
   })
 
   it('penaliza uma vez por familia espalhada', () => {
-    const ctx = montarContexto([jogo('a'), jogo('b', 'a')], estante)
+    const contexto = montarContexto([jogo('a'), jogo('b', 'a')], estante)
     const pontuacao = pontuar(
       arranjoCom([
         { idJogo: 'a', idCompartimento: 'e1-p0' },
         { idJogo: 'b', idCompartimento: 'e1-p1' },
       ]),
-      ctx,
+      contexto,
       PESOS_PADRAO,
     )
     expect(pontuacao.porTermo.familiaDividida).toBe(-1)
@@ -108,22 +108,26 @@ describe('pontuar — familia dividida', () => {
 describe('pontuar — altura dos olhos', () => {
   it('premia o jogo mais jogado na prateleira confortavel', () => {
     const jogos = [jogo('a', null, { tipo: 'partidas', quantidade: 30 }), jogo('b')]
-    const ctx = montarContexto(jogos, estante)
+    const contexto = montarContexto(jogos, estante)
     // e1-p2 tem base 940 mm; e1-p0 tem base 100 mm.
-    const alto = pontuar(arranjoCom([{ idJogo: 'a', idCompartimento: 'e1-p2' }]), ctx, PESOS_PADRAO)
+    const alto = pontuar(
+      arranjoCom([{ idJogo: 'a', idCompartimento: 'e1-p2' }]),
+      contexto,
+      PESOS_PADRAO,
+    )
     const baixo = pontuar(
       arranjoCom([{ idJogo: 'a', idCompartimento: 'e1-p0' }]),
-      ctx,
+      contexto,
       PESOS_PADRAO,
     )
     expect(alto.porTermo.alturaDosOlhos).toBeGreaterThan(baixo.porTermo.alturaDosOlhos)
   })
 
   it('zera o termo quando ninguem tem sinal de frequencia', () => {
-    const ctx = montarContexto([jogo('a')], estante)
+    const contexto = montarContexto([jogo('a')], estante)
     const pontuacao = pontuar(
       arranjoCom([{ idJogo: 'a', idCompartimento: 'e1-p1' }]),
-      ctx,
+      contexto,
       PESOS_PADRAO,
     )
     expect(pontuacao.porTermo.alturaDosOlhos).toBe(0)
@@ -132,12 +136,12 @@ describe('pontuar — altura dos olhos', () => {
 
 describe('pontuar — total', () => {
   it('combina os tres termos com os pesos informados', () => {
-    const ctx = montarContexto([jogo('a'), jogo('b', 'a')], estante)
+    const contexto = montarContexto([jogo('a'), jogo('b', 'a')], estante)
     const arranjo = arranjoCom([
       { idJogo: 'a', idCompartimento: 'e1-p0' },
       { idJogo: 'b', idCompartimento: 'e1-p1' },
     ])
-    const { total, porTermo } = pontuar(arranjo, ctx, PESOS_PADRAO)
+    const { total, porTermo } = pontuar(arranjo, contexto, PESOS_PADRAO)
     const esperado =
       PESOS_PADRAO.sobraConcentrada * porTermo.sobraConcentrada +
       PESOS_PADRAO.familiaDividida * porTermo.familiaDividida +

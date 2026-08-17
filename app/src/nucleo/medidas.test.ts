@@ -3,6 +3,7 @@ import {
   cmParaMm,
   exigirDistanciaValida,
   exigirMedidaValida,
+  exigirMilimetroValido,
   normalizarNome,
   polegadasParaMm,
 } from './medidas.js'
@@ -36,12 +37,25 @@ describe('normalizarNome', () => {
     expect(normalizarNome('Terra Mystica: Fogo & Gelo')).toBe('terra mystica fogo gelo')
   })
 
+  // Equivalência, não só saída literal: é para casar grafias diferentes que a
+  // função existe, e comparar só uma entrada por vez foi o que deixou passar o
+  // bug do indicador ordinal (ver os dois testes abaixo, que já eram assim).
+  it('casa a grafia com pontuação e a já normalizada', () => {
+    expect(normalizarNome('Terra Mystica: Fogo & Gelo')).toBe(
+      normalizarNome('terra mystica fogo gelo'),
+    )
+  })
+
   it('normaliza edição nacional com acentos', () => {
     expect(normalizarNome('Ora et Labora — Edição Nacional')).toBe('ora et labora edicao nacional')
   })
 
   it('colapsa espaços repetidos e apara as pontas', () => {
     expect(normalizarNome('  Catan   ')).toBe('catan')
+  })
+
+  it('casa a grafia com espaços extras e a já normalizada', () => {
+    expect(normalizarNome('  Catan   ')).toBe(normalizarNome('catan'))
   })
 
   it('casa indicador ordinal com a letra simples equivalente', () => {
@@ -72,5 +86,20 @@ describe('exigirDistanciaValida', () => {
     expect(() => exigirDistanciaValida(-5, 'alturaDoRodapeMm')).toThrow(
       /alturaDoRodapeMm.*recebido: -5/,
     )
+  })
+})
+
+describe('exigirMilimetroValido', () => {
+  it('aceita inteiro positivo', () => {
+    expect(() => exigirMilimetroValido(295, 'maiorMm')).not.toThrow()
+  })
+
+  it('recusa fracao, mesmo positiva, citando campo e valor', () => {
+    expect(() => exigirMilimetroValido(295.5, 'maiorMm')).toThrow(/maiorMm.*recebido: 295.5/)
+  })
+
+  it('recusa zero e negativo, herdando de exigirMedidaValida', () => {
+    expect(() => exigirMilimetroValido(0, 'maiorMm')).toThrow(/maiorMm/)
+    expect(() => exigirMilimetroValido(-10, 'maiorMm')).toThrow(/maiorMm/)
   })
 })

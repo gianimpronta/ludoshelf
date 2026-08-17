@@ -22,9 +22,9 @@ export interface EntradaDoMotor {
  * @example arranjar({ jogos, estante, pesos: PESOS_PADRAO, gerador, iteracoes: 20000 })
  */
 export function arranjar(entrada: EntradaDoMotor): Arranjo {
-  const ctx = montarContexto(entrada.jogos, entrada.estante)
-  const inicial = montarArranjoInicial(entrada.jogos, ctx)
-  const melhorado = melhorar(inicial, ctx, entrada.pesos, entrada.gerador, entrada.iteracoes)
-  const ordenado = ordenarParaExibicao(melhorado, ctx)
-  return { ...ordenado, pontuacao: pontuar(ordenado, ctx, entrada.pesos) }
+  const contexto = montarContexto(entrada.jogos, entrada.estante)
+  const inicial = montarArranjoInicial(entrada.jogos, contexto)
+  const melhorado = melhorar(inicial, contexto, entrada.pesos, entrada.gerador, entrada.iteracoes)
+  const ordenado = ordenarParaExibicao(melhorado, contexto)
+  return { ...ordenado, pontuacao: pontuar(ordenado, contexto, entrada.pesos) }
 }

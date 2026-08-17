@@ -49,11 +49,11 @@ describe('montarArranjoInicial', () => {
       jogo('c', criarMedidas(295, 220, 200, manual, true)),
     ]
     const estante = estanteDe(500, [350, 350])
-    const ctx = montarContexto(jogos, estante)
-    const arranjo = montarArranjoInicial(jogos, ctx)
+    const contexto = montarContexto(jogos, estante)
+    const arranjo = montarArranjoInicial(jogos, contexto)
     const porCompartimento = new Map<string, number>()
     for (const posicao of arranjo.posicoes) {
-      const espessura = ctx.jogosPorId.get(posicao.idJogo)?.medidas.espessuraMm ?? 0
+      const espessura = contexto.jogosPorId.get(posicao.idJogo)?.medidas.espessuraMm ?? 0
       const usado = (porCompartimento.get(posicao.idCompartimento) ?? 0) + espessura
       porCompartimento.set(posicao.idCompartimento, usado)
       expect(usado).toBeLessThanOrEqual(500)

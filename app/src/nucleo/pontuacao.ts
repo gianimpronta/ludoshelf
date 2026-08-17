@@ -49,17 +49,17 @@ export function haSinalDeFrequencia(jogos: readonly CaixaDeJogo[]): boolean {
 /**
  * Pontua um arranjo. Pura e sem estado: mesma entrada, mesma saída.
  *
- * @example pontuar(arranjo, ctx, PESOS_PADRAO).total
+ * @example pontuar(arranjo, contexto, PESOS_PADRAO).total
  */
 export function pontuar(
   arranjo: Arranjo,
-  ctx: ContextoDeArranjo,
+  contexto: ContextoDeArranjo,
   pesos: PesosDeCriterio,
 ): Pontuacao {
   const porTermo = {
-    sobraConcentrada: medirSobraConcentrada(arranjo, ctx),
-    familiaDividida: medirFamiliaDividida(arranjo, ctx),
-    alturaDosOlhos: medirAlturaDosOlhos(arranjo, ctx),
+    sobraConcentrada: medirSobraConcentrada(arranjo, contexto),
+    familiaDividida: medirFamiliaDividida(arranjo, contexto),
+    alturaDosOlhos: medirAlturaDosOlhos(arranjo, contexto),
   }
   const total =
     pesos.sobraConcentrada * porTermo.sobraConcentrada +
@@ -69,14 +69,14 @@ export function pontuar(
 }
 
 /** Soma dos quadrados da sobra em metros: concentrar vale mais que espalhar. */
-function medirSobraConcentrada(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
+function medirSobraConcentrada(arranjo: Arranjo, contexto: ContextoDeArranjo): number {
   const ocupado = new Map<string, Milimetros>()
   for (const posicao of arranjo.posicoes) {
-    const espessura = exigirJogo(ctx, posicao.idJogo).medidas.espessuraMm
+    const espessura = exigirJogo(contexto, posicao.idJogo).medidas.espessuraMm
     ocupado.set(posicao.idCompartimento, (ocupado.get(posicao.idCompartimento) ?? 0) + espessura)
   }
   let soma = 0
-  for (const compartimento of ctx.compartimentos) {
+  for (const compartimento of contexto.compartimentos) {
     const livreM = (compartimento.larguraUtilMm - (ocupado.get(compartimento.id) ?? 0)) / 1000
     soma += livreM * livreM
   }
@@ -84,12 +84,12 @@ function medirSobraConcentrada(arranjo: Arranjo, ctx: ContextoDeArranjo): number
 }
 
 /** Negativo: uma unidade de penalidade por família espalhada entre compartimentos. */
-function medirFamiliaDividida(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
+function medirFamiliaDividida(arranjo: Arranjo, contexto: ContextoDeArranjo): number {
   const compartimentoPorJogo = new Map(
     arranjo.posicoes.map((posicao) => [posicao.idJogo, posicao.idCompartimento]),
   )
   let divididas = 0
-  for (const familia of ctx.familias) {
+  for (const familia of contexto.familias) {
     const alojamentos = new Set(
       familia.membros
         .map((id) => compartimentoPorJogo.get(id))
@@ -111,15 +111,16 @@ function medirFamiliaDividida(arranjo: Arranjo, ctx: ContextoDeArranjo): number 
  * por um muito jogado não mexeria no valor. Normalizando pela coleção, deixar um
  * jogo muito jogado de fora custa pontos, que é o que a spec §11 exige.
  */
-function medirAlturaDosOlhos(arranjo: Arranjo, ctx: ContextoDeArranjo): number {
-  const pesoDaColecao = somarPesos([...ctx.jogosPorId.values()])
+function medirAlturaDosOlhos(arranjo: Arranjo, contexto: ContextoDeArranjo): number {
+  const pesoDaColecao = somarPesos([...contexto.jogosPorId.values()])
   if (pesoDaColecao === 0) return 0
 
   let acumulado = 0
   for (const posicao of arranjo.posicoes) {
-    const peso = pesoDeFrequencia(exigirJogo(ctx, posicao.idJogo).frequencia)
+    const peso = pesoDeFrequencia(exigirJogo(contexto, posicao.idJogo).frequencia)
     if (peso === 0) continue
-    acumulado += peso * conforto(exigirCompartimento(ctx, posicao.idCompartimento).alturaDaBaseMm)
+    acumulado +=
+      peso * conforto(exigirCompartimento(contexto, posicao.idCompartimento).alturaDaBaseMm)
   }
   return acumulado / pesoDaColecao
 }

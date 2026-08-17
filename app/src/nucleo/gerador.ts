@@ -29,11 +29,16 @@ export function geradorMulberry32(semente: number): Gerador {
 /** Dublê nomeado para testes: repete ciclicamente a sequência informada. */
 export class GeradorFixo implements Gerador {
   private indice = 0
+  private readonly sequencia: readonly number[]
 
-  constructor(private readonly sequencia: readonly number[]) {
+  constructor(sequencia: readonly number[]) {
     if (sequencia.length === 0) {
       throw new RangeError('GeradorFixo precisa de ao menos um valor; recebido: []')
     }
+    sequencia.forEach((valor, indice) => exigirFracaoValida(valor, `sequencia[${indice}]`))
+    // Copia para que mutar o array original depois de construir o dublê não
+    // altere silenciosamente a sequência que um teste já em execução espera usar.
+    this.sequencia = [...sequencia]
   }
 
   proximo(): number {
@@ -45,14 +50,27 @@ export class GeradorFixo implements Gerador {
   }
 }
 
+/** Falha se o valor não puder vir de `Gerador.proximo()`: precisa estar em [0, 1). */
+function exigirFracaoValida(valor: number, campo: string): void {
+  if (!Number.isFinite(valor) || valor < 0 || valor >= 1) {
+    throw new RangeError(`${campo} deve estar em [0, 1); recebido: ${JSON.stringify(valor)}`)
+  }
+}
+
 /**
- * Sorteia um índice em [0, tamanho).
+ * Sorteia um índice em [0, tamanho). Valida o valor devolvido pelo gerador, e não
+ * só o próprio `tamanho`: um `Gerador` mal implementado (por exemplo, um adaptador
+ * futuro lendo fixtures gravadas) que devolvesse algo fora de [0, 1) produziria um
+ * índice fora de `[0, tamanho)` sem erro nenhum, e o acesso ao array devolveria
+ * `undefined` silenciosamente lá na frente.
  *
  * @example sortearIndice(gerador, 5) // 0..4
  */
 export function sortearIndice(gerador: Gerador, tamanho: number): number {
-  if (tamanho <= 0) {
-    throw new RangeError(`tamanho deve ser maior que zero; recebido: ${tamanho}`)
+  if (!Number.isInteger(tamanho) || tamanho <= 0) {
+    throw new RangeError(`tamanho deve ser um número inteiro maior que zero; recebido: ${tamanho}`)
   }
-  return Math.min(tamanho - 1, Math.floor(gerador.proximo() * tamanho))
+  const valor = gerador.proximo()
+  exigirFracaoValida(valor, 'gerador.proximo()')
+  return Math.min(tamanho - 1, Math.floor(valor * tamanho))
 }
