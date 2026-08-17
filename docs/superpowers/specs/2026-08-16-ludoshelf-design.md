@@ -25,8 +25,9 @@ Fora:
 
 - Ajuste manual por arrastar e soltar (fase 2 — o modelo de dados já a acomoda; ver §6.4).
 - Estantes de nichos tipo Kallax, alturas irregulares, divisórias verticais (fase 2 — o
-  modelo de compartimentos já as acomoda; ver §5.2).
-- Orientações além de "em pé, lombada à frente" (fase 2; ver §5.3).
+  modelo de compartimentos já as acomoda; ver §6.2).
+- Orientações além de "em pé, lombada à frente" (fase 2; ver §7.2).
+- Importação de arquivos XLSX (ver §9.3).
 - Contas de usuário e sincronização entre dispositivos. Persistência é local.
 
 ## 3. Descobertas sobre as fontes de dados
@@ -143,6 +144,7 @@ Dependências entram por parâmetro ou construtor, nunca por import global.
 
 ```ts
 type Milimetros = number;                    // inteiro, sempre
+type IdJogo = string;                        // identificador local, estável entre sessões
 
 interface CaixaDeJogo {
   readonly id: IdJogo;
@@ -273,17 +275,29 @@ lento acima de ~100 jogos, e o ótimo matemático não é o resultado desejado);
 ### 7.4 Função de pontuação
 
 ```ts
+interface PesosDeCriterio {
+  readonly sobraConcentrada: number;
+  readonly familiaDividida: number;
+  readonly alturaDosOlhos: number;
+}
+
+interface Pontuacao {
+  readonly total: number;
+  readonly porTermo: Readonly<Record<keyof PesosDeCriterio, number>>;
+}
+
 function pontuar(arranjo: Arranjo, pesos: PesosDeCriterio): Pontuacao
 ```
 
-Pura, sem estado.
+Pura, sem estado. `porTermo` existe para a UI mostrar o efeito de cada peso e para os
+testes de regressão apontarem qual termo mudou.
 
 | Termo | Medida | Motivo da forma |
 |---|---|---|
 | Sobra concentrada | soma dos **quadrados** da largura livre por compartimento | o quadrado premia 60 cm livres num lugar sobre 15 cm em quatro |
 | Família dividida | penalidade × nº de famílias em compartimentos diferentes | alta, porém **finita**: cede se travar o encaixe, em vez de tornar o problema insolúvel |
 | Altura dos olhos | Σ (partidas registradas × conforto da altura da base) | conforto = 1,0 entre 1200 mm e 1650 mm, caindo para as pontas |
-| Alfabética | não pontuada | é ordenação final, custo zero (§7.1.1) |
+| Alfabética | não pontuada | é ordenação final, custo zero (§7.1, ponto 1) |
 
 Hierarquia efetiva: caber é restrição dura; família junta é penalidade forte e finita;
 sobra concentrada e altura dos olhos são termos ponderados; alfabética é apresentação.
@@ -355,6 +369,29 @@ export de coleção do BGG e planilha própria sem um parser por formato.
 
 XLSX fica fora do v1 — entra atrás da mesma interface `LeitorDePlanilha`, carregado sob
 demanda, se vier a ser pedido.
+
+### 9.4 Tabela semeada de medidas
+
+Arquivo JSON versionado no repositório, lido por `CatalogoSemeado`. Duas espécies de
+entrada:
+
+- **Formatos padrão** da indústria, casados por chave (`quadrada-295`, `retangular-295x220`,
+  `pequena-160x160`), que cobrem a maior parte de uma coleção típica.
+- **Jogos específicos**, casados por nome normalizado, quando a caixa foge do padrão.
+
+```ts
+interface EntradaSemeada {
+  readonly chave: string;
+  readonly nomesConhecidos: readonly string[];   // normalizados para casamento
+  readonly maiorMm: Milimetros;
+  readonly menorMm: Milimetros;
+  readonly espessuraMm: Milimetros;
+  readonly fonte: string;                        // de onde veio a medida — ver R3
+}
+```
+
+O campo `fonte` é obrigatório e existe por causa de R3: cada linha declara sua origem, o
+que torna auditável a restrição de não povoar a tabela com dados extraídos do BGG.
 
 ## 10. Tratamento de erros
 
