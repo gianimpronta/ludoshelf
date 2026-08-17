@@ -486,7 +486,7 @@ de regressão.
 
 | # | Risco | Mitigação |
 |---|---|---|
-| R1 | Tokens fora do controle do time: Ludopedia por e-mail a `api@ludopedia.com.br`, BGG por registro de aplicação. É o item de maior prazo do projeto. | Solicitar ambos imediatamente. Desenvolvimento segue contra fixtures gravadas e modo offline. Além disso, **nenhum dos quatro critérios depende de token**: "família junta" e "altura dos olhos" têm caminho por CSV e por marcação manual (§9.3, §8). Sem token o app perde conveniência, não funcionalidade. |
+| R1 | ~~Tokens fora do controle do time.~~ **Resolvido em 2026-08-16:** os tokens da Ludopedia e do BGG já estão em posse do desenvolvedor. | Restam duas obrigações de projeto: os tokens vivem apenas em `.env` no lado do proxy, nunca no repositório nem no bundle do navegador (§5.1, `.gitignore`); e o desenvolvimento contra fixtures gravadas continua, para que a suíte de testes não dependa de rede. Além disso, **nenhum dos quatro critérios depende de token**: "família junta" e "altura dos olhos" têm caminho por CSV e por marcação manual (§9.3, §8). |
 | R2 | Cobertura de medidas irregular e às vezes errada. | Quatro vias de entrada, precedência explícita (§9.1) e "faltando medida" visível na cena. |
 | R3 | Termos do BGG sobre cachear e redistribuir dados não verificados — a página de termos devolveu 403 do ambiente de desenvolvimento. | Até confirmação, a tabela semeada é povoada com medidas próprias e specs de fabricante, **não** com dados extraídos do BGG. Restrição cautelar, relaxável se os termos permitirem. |
 | R4 | Ambiguidade de edição no BGG. | O proxy devolve candidatas; a escolha é do usuário (§9.2). |
