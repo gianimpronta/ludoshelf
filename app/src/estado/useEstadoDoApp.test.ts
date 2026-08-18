@@ -97,6 +97,25 @@ describe('removerJogo', () => {
     expect(useEstadoDoApp.getState().jogos).toEqual([])
     expect(await repositorio.carregarJogos()).toEqual([])
   })
+
+  it('desvincula as expansoes ao remover o jogo-base, em vez de deixar idJogoBase orfao', async () => {
+    // CodeRabbit, PR #2: remover um jogo-base sem tratar os dependentes deixa
+    // `idJogoBase` apontando pra um id que nao existe mais. Decisao do usuario:
+    // desvincular (idJogoBase -> null), a expansao vira jogo avulso em vez de
+    // ser removida em cascata ou bloquear a remocao do jogo-base.
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+    await useEstadoDoApp.getState().salvarJogo(jogo('base'))
+    await useEstadoDoApp.getState().salvarJogo({ ...jogo('exp'), idJogoBase: 'base' })
+
+    await useEstadoDoApp.getState().removerJogo('base')
+
+    const jogos = useEstadoDoApp.getState().jogos
+    expect(jogos).toHaveLength(1)
+    expect(jogos[0]?.id).toBe('exp')
+    expect(jogos[0]?.idJogoBase).toBeNull()
+    expect((await repositorio.carregarJogos())[0]?.idJogoBase).toBeNull()
+  })
 })
 
 describe('salvarEstante e selecionarEstante', () => {

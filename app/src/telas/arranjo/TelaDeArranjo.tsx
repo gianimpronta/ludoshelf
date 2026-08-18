@@ -37,7 +37,6 @@ export function TelaDeArranjo() {
       </button>
 
       {calculando && <p role="status">Calculando…</p>}
-
       {arranjo === null ? (
         calculando ? null : <p>Nenhum arranjo calculado ainda.</p>
       ) : (

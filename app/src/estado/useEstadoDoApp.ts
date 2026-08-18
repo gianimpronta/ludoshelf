@@ -75,16 +75,20 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
 
   async removerJogo(id) {
     const { repositorio, jogos, geracao } = get()
-    const expansoesDependentes = jogos.filter((jogo) => jogo.idJogoBase === id)
-    const idsParaRemover = [id, ...expansoesDependentes.map((expansao) => expansao.id)]
-    set({
-      jogos: jogos.filter((jogo) => !idsParaRemover.includes(jogo.id)),
-      arranjo: null,
-      geracao: geracao + 1,
-    })
-    for (const idParaRemover of idsParaRemover) {
-      await repositorio.removerJogo(idParaRemover)
-    }
+    // Desvincula em vez de deixar orfao: uma expansao cujo jogo-base some não
+    // deve manter um `idJogoBase` que não existe mais (CodeRabbit, PR #2) —
+    // ela passa a existir como jogo avulso, em vez de ser removida em
+    // cascata (decisão do usuário: perder o vínculo é aceitável, perder a
+    // expansão cadastrada não é).
+    const dependentes = jogos.filter((jogo) => jogo.idJogoBase === id)
+    const semODependentes = jogos
+      .filter((jogo) => jogo.id !== id)
+      .map((jogo) => (jogo.idJogoBase === id ? { ...jogo, idJogoBase: null } : jogo))
+    set({ jogos: semODependentes, arranjo: null, geracao: geracao + 1 })
+    await Promise.all(
+      dependentes.map((jogo) => repositorio.salvarJogo({ ...jogo, idJogoBase: null })),
+    )
+    await repositorio.removerJogo(id)
   },
 
   async salvarEstante(estante) {

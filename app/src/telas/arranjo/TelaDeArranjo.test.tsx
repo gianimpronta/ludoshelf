@@ -52,4 +52,13 @@ describe('TelaDeArranjo', () => {
 
     expect(await screen.findByText(/Toda a coleção coube/)).toBeInTheDocument()
   })
+
+  it('mostra o status de calculando mesmo no primeiro calculo, antes de haver arranjo', () => {
+    // Regressao: o <p role="status"> vivia dentro do ramo `arranjo !== null`.
+    // No primeiro clique em Recalcular, `arranjo` ainda é `null` quando
+    // `calculando` já é `true` — o status nunca aparecia (CodeRabbit, PR #2).
+    useEstadoDoApp.setState({ calculando: true, arranjo: null })
+    render(<TelaDeArranjo />)
+    expect(screen.getByRole('status')).toHaveTextContent('Calculando…')
+  })
 })
