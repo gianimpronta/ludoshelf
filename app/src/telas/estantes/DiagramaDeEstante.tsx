@@ -41,24 +41,32 @@ export function DiagramaDeEstante({ definicao }: { definicao: DefinicaoDeEstante
         stroke="#333"
         strokeWidth="2"
       />
-      {linhasDePrateleira.map(({ yMm, alturaLivreMm }, indice) => (
-        <g key={yMm}>
-          {indice > 0 && (
-            <line
-              data-papel="linha-de-prateleira"
-              x1="0"
-              y1={20 + yMm * escala}
-              x2={larguraDesenhada}
-              y2={20 + yMm * escala}
-              stroke="#333"
-              strokeWidth="2"
-            />
-          )}
-          <text x={larguraDesenhada + 8} y={20 + (yMm - alturaLivreMm / 2) * escala} fontSize="10">
-            {alturaLivreMm}mm
-          </text>
-        </g>
-      ))}
+      {linhasDePrateleira.map(({ yMm, alturaLivreMm }, indice) => {
+        const yDoTopo = alturaTotalMm - yMm
+        const yMeioCompartimento = alturaTotalMm - yMm + alturaLivreMm / 2
+        return (
+          <g key={yMm}>
+            {indice > 0 && (
+              <line
+                data-papel="linha-de-prateleira"
+                x1="0"
+                y1={20 + yDoTopo * escala}
+                x2={larguraDesenhada}
+                y2={20 + yDoTopo * escala}
+                stroke="#333"
+                strokeWidth="2"
+              />
+            )}
+            <text
+              x={larguraDesenhada + 8}
+              y={20 + yMeioCompartimento * escala}
+              fontSize="10"
+            >
+              {alturaLivreMm}mm
+            </text>
+          </g>
+        )
+      })}
       <rect
         x="0"
         y={20 + alturaTotalMm * escala - definicao.alturaDoRodapeMm * escala}

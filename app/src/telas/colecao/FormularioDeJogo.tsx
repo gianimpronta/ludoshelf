@@ -25,6 +25,10 @@ export function FormularioDeJogo({
   function aoSubmeter(evento: React.FormEvent): void {
     evento.preventDefault()
     try {
+      if (nome.trim() === '') {
+        setErro('O nome do jogo não pode estar vazio.')
+        return
+      }
       const medidas = criarMedidas(
         Number(ladoA),
         Number(ladoB),

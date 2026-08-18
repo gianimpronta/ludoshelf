@@ -9,9 +9,10 @@ if (raiz === null) {
   throw new Error('elemento #raiz não encontrado em index.html')
 }
 
-// Dispara antes de renderizar; o store começa com RepositorioEmMemoria e troca
-// assim que `inicializar` resolve (ou cai no fallback — spec §7).
-void useEstadoDoApp.getState().inicializar(new RepositorioDexie())
+// Aguarda inicialização do repositório antes de renderizar, garantindo que o
+// store usa o repositório final (Dexie ou fallback) quando as telas interativas
+// montarem (spec §7).
+await useEstadoDoApp.getState().inicializar(new RepositorioDexie())
 
 createRoot(raiz).render(
   <StrictMode>

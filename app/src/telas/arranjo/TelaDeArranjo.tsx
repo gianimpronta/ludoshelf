@@ -36,11 +36,12 @@ export function TelaDeArranjo() {
         Recalcular arranjo
       </button>
 
+      {calculando && <p role="status">Calculando…</p>}
+
       {arranjo === null ? (
-        <p>Nenhum arranjo calculado ainda.</p>
+        calculando ? null : <p>Nenhum arranjo calculado ainda.</p>
       ) : (
         <div style={{ opacity: calculando ? 0.4 : 1, transition: 'opacity 200ms' }}>
-          {calculando && <p role="status">Calculando…</p>}
           {estanteAtiva !== undefined && contexto !== null && (
             // O <Canvas> do react-three-fiber preenche 100% do pai; sem uma
             // altura explícita aqui, o pai colapsa e o r3f cai no tamanho

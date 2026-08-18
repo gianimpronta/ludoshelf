@@ -26,6 +26,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
     "resize-observer-polyfill": "^1.5.1",
-    "vite": "^8.2.1"
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

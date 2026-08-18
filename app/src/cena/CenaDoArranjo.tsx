@@ -43,6 +43,7 @@ export function CenaDoArranjo({
         <ObjetoDoJogo
           key={objeto.idJogo}
           objeto={objeto}
+          label={contexto.jogosPorId.get(objeto.idJogo)?.nome ?? objeto.idJogo}
           emFoco={objeto.idJogo === idEmFoco}
           aoEntrar={() => setIdEmFoco(objeto.idJogo)}
           aoSair={() => setIdEmFoco((atual) => (atual === objeto.idJogo ? null : atual))}
@@ -62,12 +63,14 @@ export function CenaDoArranjo({
 
 function ObjetoDoJogo({
   objeto,
+  label,
   emFoco,
   aoEntrar,
   aoSair,
   aoClicar,
 }: {
   objeto: ObjetoNaCena
+  label: string
   emFoco: boolean
   aoEntrar: () => void
   aoSair: () => void
@@ -83,7 +86,7 @@ function ObjetoDoJogo({
       <boxGeometry args={objeto.dimensoesXYZ as [number, number, number]} />
       <meshStandardMaterial color={objeto.cor} />
       {objeto.tracejado && <Edges color="#333" />}
-      {emFoco && <Html center>{objeto.idJogo}</Html>}
+      {emFoco && <Html center>{label}</Html>}
     </mesh>
   )
 }
