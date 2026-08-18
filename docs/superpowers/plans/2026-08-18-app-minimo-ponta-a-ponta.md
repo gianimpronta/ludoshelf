@@ -2283,8 +2283,17 @@ describe('mapear', () => {
   })
 
   it('gera uma prateleira por compartimento', () => {
+    // Arranjo vazio de propósito: este teste é só sobre prateleiras, e
+    // arranjoCom() sempre inclui uma posição para o jogo 'a', que não existe
+    // no contexto vazio — mapear um posicionamento de jogo inexistente falha
+    // alto no núcleo (defeito de programação, não entrada do usuário).
     const contexto = montarContexto([], estante)
-    const resultado = mapear(arranjoCom(), contexto, estante)
+    const arranjoVazio: Arranjo = {
+      posicoes: [],
+      naoAlocados: [],
+      pontuacao: { total: 0, porTermo: { sobraConcentrada: 0, familiaDividida: 0, alturaDosOlhos: 0 } },
+    }
+    const resultado = mapear(arranjoVazio, contexto, estante)
     expect(resultado.prateleiras).toHaveLength(1)
   })
 
