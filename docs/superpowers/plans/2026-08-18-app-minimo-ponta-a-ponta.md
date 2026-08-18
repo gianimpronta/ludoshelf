@@ -1577,7 +1577,7 @@ describe('TelaDeEstantes', () => {
     await usuario.type(screen.getByLabelText('Altura livre da prateleira 1 (mm)'), '350')
     await usuario.click(screen.getByRole('button', { name: 'Salvar estante' }))
 
-    expect(await screen.findByText('Billy da sala')).toBeInTheDocument()
+    expect(await screen.findByText(/Billy da sala/)).toBeInTheDocument()
   })
 
   it('marca a estante ativa na lista', async () => {
