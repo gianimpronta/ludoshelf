@@ -2005,7 +2005,11 @@ describe('TelaDeColecao', () => {
     await usuario.type(screen.getByLabelText('Espessura (mm)'), '70')
     await usuario.click(screen.getByRole('button', { name: 'Salvar jogo' }))
 
-    expect(await screen.findByText('Catan')).toBeInTheDocument()
+    // Depois de cadastrado, "Catan" aparece duas vezes: na célula da tabela e
+    // como opção de jogo-base no próprio formulário (comportamento correto —
+    // um jogo cadastrado passa a poder ser base de uma expansão). Mira a
+    // célula especificamente.
+    expect(await screen.findByRole('cell', { name: 'Catan' })).toBeInTheDocument()
   })
 
   it('remove um jogo cadastrado', async () => {
@@ -2016,11 +2020,11 @@ describe('TelaDeColecao', () => {
     await usuario.type(screen.getByLabelText('Lado B (mm)'), '220')
     await usuario.type(screen.getByLabelText('Espessura (mm)'), '70')
     await usuario.click(screen.getByRole('button', { name: 'Salvar jogo' }))
-    await screen.findByText('Catan')
+    await screen.findByRole('cell', { name: 'Catan' })
 
     await usuario.click(screen.getByRole('button', { name: 'Remover Catan' }))
 
-    expect(screen.queryByText('Catan')).not.toBeInTheDocument()
+    expect(screen.queryByRole('cell', { name: 'Catan' })).not.toBeInTheDocument()
   })
 })
 ```
