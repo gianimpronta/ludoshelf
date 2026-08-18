@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import type { Arranjo } from '../nucleo/arranjo.js'
 import type { Estante } from '../nucleo/estante.js'
+import { geradorMulberry32 } from '../nucleo/gerador.js'
 import type { CaixaDeJogo, IdJogo } from '../nucleo/jogo.js'
+import { arranjar } from '../nucleo/motor.js'
+import { PESOS_PADRAO } from '../nucleo/pontuacao.js'
 import type { RepositorioDeColecao } from '../persistencia/RepositorioDeColecao.js'
 import { RepositorioEmMemoria } from '../persistencia/RepositorioEmMemoria.js'
 
@@ -24,6 +27,7 @@ export interface EstadoDoApp {
   removerJogo(id: IdJogo): Promise<void>
   salvarEstante(estante: Estante): Promise<void>
   selecionarEstante(id: string): void
+  recalcularArranjo(): void
   irParaTela(tela: Tela): void
 }
 
@@ -85,6 +89,27 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
 
   selecionarEstante(id) {
     set({ estanteAtivaId: id })
+  },
+
+  recalcularArranjo() {
+    const { estanteAtivaId, estantes, jogos } = get()
+    const estanteAtiva = estantes.find((estante) => estante.id === estanteAtivaId)
+    if (estanteAtiva === undefined) return
+
+    set({ calculando: true })
+    // Adia um tick: sem isso a mesma thread que pintaria o esmaecimento fica
+    // ocupada pelas iterações do motor, e o usuário nunca vê o estado
+    // "calculando" (spec §6).
+    setTimeout(() => {
+      const arranjo = arranjar({
+        jogos,
+        estante: estanteAtiva,
+        pesos: PESOS_PADRAO,
+        gerador: geradorMulberry32(Date.now()),
+        iteracoes: 20000,
+      })
+      set({ arranjo, calculando: false })
+    }, 0)
   },
 
   irParaTela(tela) {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { criarMedidas, type CaixaDeJogo } from '../nucleo/jogo.js'
 import { montarEstante, type Estante } from '../nucleo/estante.js'
 import { RepositorioEmMemoria } from '../persistencia/RepositorioEmMemoria.js'
@@ -26,6 +26,11 @@ const estante = (id: string): Estante =>
 
 beforeEach(() => {
   useEstadoDoApp.setState(useEstadoDoApp.getInitialState())
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('inicializar', () => {
@@ -122,5 +127,28 @@ describe('irParaTela', () => {
   it('troca a tela ativa', () => {
     useEstadoDoApp.getState().irParaTela('colecao')
     expect(useEstadoDoApp.getState().telaAtiva).toBe('colecao')
+  })
+})
+
+describe('recalcularArranjo', () => {
+  it('nao faz nada sem estante ativa', () => {
+    useEstadoDoApp.getState().recalcularArranjo()
+    expect(useEstadoDoApp.getState().arranjo).toBeNull()
+    expect(useEstadoDoApp.getState().calculando).toBe(false)
+  })
+
+  it('calcula o arranjo com os jogos e a estante ativa', async () => {
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+    await useEstadoDoApp.getState().salvarEstante(estante('e1'))
+    await useEstadoDoApp.getState().salvarJogo(jogo('a'))
+
+    useEstadoDoApp.getState().recalcularArranjo()
+    expect(useEstadoDoApp.getState().calculando).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(useEstadoDoApp.getState().calculando).toBe(false)
+    expect(useEstadoDoApp.getState().arranjo?.posicoes).toHaveLength(1)
   })
 })
