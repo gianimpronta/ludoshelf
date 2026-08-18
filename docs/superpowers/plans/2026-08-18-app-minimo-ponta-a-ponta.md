@@ -3329,6 +3329,39 @@ Esperado: branch sincronizada com o remoto, sem divergência.
 
 ---
 
+## Desvios entre o plano e o que foi implementado
+
+Executado em 2026-08-18, direto (sem subagentes). O código é a fonte de verdade; este
+registro existe para quem for escrever os planos 3 e 4 não partir de premissas falsas.
+
+**Defeitos do próprio plano, encontrados durante a execução:**
+
+1. **`environmentMatchGlobs` não separa ambientes dentro de um único config** (Task 1).
+   Vitest 4.1.10 não respeita glob por ambiente num config só; resolvido com dois
+   configs irmãos (`app/vite.config.ts` para jsdom, `app/vitest.nucleo.config.ts` para
+   node) referenciados como `projects` na raiz.
+2. **Limpeza de DOM entre testes não é automática** (Task 6). O auto-cleanup do
+   `@testing-library/react` depende de `test.globals: true`, que este projeto
+   deliberadamente não usa. Sem `afterEach(() => cleanup())` explícito em
+   `setupTests.ts`, estado de DOM vazava entre testes e `getByText` passava a achar
+   nós duplicados.
+3. **`LimiteDeErroDaCena` (Task 12) precisa de `override` explícito.** `tsconfig.json`
+   liga `noImplicitOverride`; `state` e `render()` sobrescrevem membros de `Component`
+   e o `typecheck` reprovava sem o modificador.
+4. **`vi.useFakeTimers()` trava `userEvent.click` quando a cena 3D já está montada**
+   (Task 12). `CenaDoArranjo` monta um `<Canvas>` do react-three-fiber cujo loop de
+   render usa `requestAnimationFrame`; `useFakeTimers()` também substitui o RAF, e como
+   o loop do r3f reagenda a si mesmo a cada frame, isso vira uma recursão que nunca
+   termina — o `click` (que espera os timers avançarem) trava para sempre. O teste
+   "calcula ao clicar em Recalcular" foi trocado para timers reais: o
+   `setTimeout(0)` real de `recalcularArranjo` é rápido o bastante para o polling
+   padrão do `findByText` capturá-lo sem precisar de `vi.advanceTimersByTime`.
+
+**Ajustes de infraestrutura:**
+
+- `.prettierignore` (revisão pós-Plano 1) inclui `CLAUDE.md`: sem isso o Prettier
+  reformatava blocos de código dentro do markdown, quebrando a indentação.
+
 ## Cobertura da spec por este plano
 
 | Seção da spec | Onde está | Observação |
