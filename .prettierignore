@@ -3,6 +3,7 @@ pnpm-lock.yaml
 
 # entregaveis em prosa: tabelas e blocos de codigo sao formatados a mao
 docs/
+CLAUDE.md
 
 # nao versionados, mas evita varredura desnecessaria
 node_modules/
