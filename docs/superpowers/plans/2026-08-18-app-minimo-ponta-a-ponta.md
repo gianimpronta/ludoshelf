@@ -3348,7 +3348,13 @@ registro existe para quem for escrever os planos 3 e 4 não partir de premissas 
 3. **`LimiteDeErroDaCena` (Task 12) precisa de `override` explícito.** `tsconfig.json`
    liga `noImplicitOverride`; `state` e `render()` sobrescrevem membros de `Component`
    e o `typecheck` reprovava sem o modificador.
-4. **`vi.useFakeTimers()` trava `userEvent.click` quando a cena 3D já está montada**
+4. **O `<Canvas>` do r3f colapsa para 300x150 sem um contêiner com altura explícita**
+   (Task 14, achado na verificação manual). `Canvas` preenche 100% do pai, mas o
+   `<div>` que envolvia `CenaDoArranjo` em `TelaDeArranjo` não tinha altura própria —
+   o `ResizeObserver` do r3f então via um pai de altura zero e nunca redimensionava.
+   Corrigido envolvendo `LimiteDeErroDaCena`/`CenaDoArranjo` num `<div style={{
+   height: '500px' }}>` explícito.
+5. **`vi.useFakeTimers()` trava `userEvent.click` quando a cena 3D já está montada**
    (Task 12). `CenaDoArranjo` monta um `<Canvas>` do react-three-fiber cujo loop de
    render usa `requestAnimationFrame`; `useFakeTimers()` também substitui o RAF, e como
    o loop do r3f reagenda a si mesmo a cada frame, isso vira uma recursão que nunca
