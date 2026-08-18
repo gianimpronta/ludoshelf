@@ -240,12 +240,23 @@ Substitua `app/tsconfig.json` por:
 
 ```ts
 import '@testing-library/jest-dom/vitest'
+import { cleanup } from '@testing-library/react'
 import ResizeObserverPolyfill from 'resize-observer-polyfill'
+import { afterEach } from 'vitest'
 
 // jsdom não implementa ResizeObserver; react-three-fiber (via react-use-measure)
 // exige um construtor global para medir o <canvas>. Verificado nesta sessão:
 // sem isto, montar <Canvas> lança "This browser does not support ResizeObserver".
 globalThis.ResizeObserver ??= ResizeObserverPolyfill as unknown as typeof ResizeObserver
+
+// @testing-library/react só registra o cleanup automático sozinho quando
+// `test.globals: true` está ligado no Vitest. Este projeto não usa globals
+// (todo teste importa describe/expect/it explicitamente de 'vitest'), então
+// sem isto o DOM de um teste vaza para o próximo — verificado nesta sessão:
+// dois testes que usam screen.getByText passavam a achar elementos duplicados.
+afterEach(() => {
+  cleanup()
+})
 ```
 
 - [ ] **Step 8: Escrever o teste do App (falha primeiro)**
@@ -1566,7 +1577,7 @@ describe('TelaDeEstantes', () => {
     await usuario.type(screen.getByLabelText('Altura livre da prateleira 1 (mm)'), '350')
     await usuario.click(screen.getByRole('button', { name: 'Salvar estante' }))
 
-    expect(await screen.findByText('Billy da sala')).toBeInTheDocument()
+    expect(await screen.findByText(/Billy da sala/)).toBeInTheDocument()
   })
 
   it('marca a estante ativa na lista', async () => {
@@ -1994,7 +2005,11 @@ describe('TelaDeColecao', () => {
     await usuario.type(screen.getByLabelText('Espessura (mm)'), '70')
     await usuario.click(screen.getByRole('button', { name: 'Salvar jogo' }))
 
-    expect(await screen.findByText('Catan')).toBeInTheDocument()
+    // Depois de cadastrado, "Catan" aparece duas vezes: na célula da tabela e
+    // como opção de jogo-base no próprio formulário (comportamento correto —
+    // um jogo cadastrado passa a poder ser base de uma expansão). Mira a
+    // célula especificamente.
+    expect(await screen.findByRole('cell', { name: 'Catan' })).toBeInTheDocument()
   })
 
   it('remove um jogo cadastrado', async () => {
@@ -2005,11 +2020,11 @@ describe('TelaDeColecao', () => {
     await usuario.type(screen.getByLabelText('Lado B (mm)'), '220')
     await usuario.type(screen.getByLabelText('Espessura (mm)'), '70')
     await usuario.click(screen.getByRole('button', { name: 'Salvar jogo' }))
-    await screen.findByText('Catan')
+    await screen.findByRole('cell', { name: 'Catan' })
 
     await usuario.click(screen.getByRole('button', { name: 'Remover Catan' }))
 
-    expect(screen.queryByText('Catan')).not.toBeInTheDocument()
+    expect(screen.queryByRole('cell', { name: 'Catan' })).not.toBeInTheDocument()
   })
 })
 ```
@@ -2268,8 +2283,17 @@ describe('mapear', () => {
   })
 
   it('gera uma prateleira por compartimento', () => {
+    // Arranjo vazio de propósito: este teste é só sobre prateleiras, e
+    // arranjoCom() sempre inclui uma posição para o jogo 'a', que não existe
+    // no contexto vazio — mapear um posicionamento de jogo inexistente falha
+    // alto no núcleo (defeito de programação, não entrada do usuário).
     const contexto = montarContexto([], estante)
-    const resultado = mapear(arranjoCom(), contexto, estante)
+    const arranjoVazio: Arranjo = {
+      posicoes: [],
+      naoAlocados: [],
+      pontuacao: { total: 0, porTermo: { sobraConcentrada: 0, familiaDividida: 0, alturaDosOlhos: 0 } },
+    }
+    const resultado = mapear(arranjoVazio, contexto, estante)
     expect(resultado.prateleiras).toHaveLength(1)
   })
 
@@ -3304,6 +3328,45 @@ git status -sb
 Esperado: branch sincronizada com o remoto, sem divergência.
 
 ---
+
+## Desvios entre o plano e o que foi implementado
+
+Executado em 2026-08-18, direto (sem subagentes). O código é a fonte de verdade; este
+registro existe para quem for escrever os planos 3 e 4 não partir de premissas falsas.
+
+**Defeitos do próprio plano, encontrados durante a execução:**
+
+1. **`environmentMatchGlobs` não separa ambientes dentro de um único config** (Task 1).
+   Vitest 4.1.10 não respeita glob por ambiente num config só; resolvido com dois
+   configs irmãos (`app/vite.config.ts` para jsdom, `app/vitest.nucleo.config.ts` para
+   node) referenciados como `projects` na raiz.
+2. **Limpeza de DOM entre testes não é automática** (Task 6). O auto-cleanup do
+   `@testing-library/react` depende de `test.globals: true`, que este projeto
+   deliberadamente não usa. Sem `afterEach(() => cleanup())` explícito em
+   `setupTests.ts`, estado de DOM vazava entre testes e `getByText` passava a achar
+   nós duplicados.
+3. **`LimiteDeErroDaCena` (Task 12) precisa de `override` explícito.** `tsconfig.json`
+   liga `noImplicitOverride`; `state` e `render()` sobrescrevem membros de `Component`
+   e o `typecheck` reprovava sem o modificador.
+4. **O `<Canvas>` do r3f colapsa para 300x150 sem um contêiner com altura explícita**
+   (Task 14, achado na verificação manual). `Canvas` preenche 100% do pai, mas o
+   `<div>` que envolvia `CenaDoArranjo` em `TelaDeArranjo` não tinha altura própria —
+   o `ResizeObserver` do r3f então via um pai de altura zero e nunca redimensionava.
+   Corrigido envolvendo `LimiteDeErroDaCena`/`CenaDoArranjo` num `<div style={{
+   height: '500px' }}>` explícito.
+5. **`vi.useFakeTimers()` trava `userEvent.click` quando a cena 3D já está montada**
+   (Task 12). `CenaDoArranjo` monta um `<Canvas>` do react-three-fiber cujo loop de
+   render usa `requestAnimationFrame`; `useFakeTimers()` também substitui o RAF, e como
+   o loop do r3f reagenda a si mesmo a cada frame, isso vira uma recursão que nunca
+   termina — o `click` (que espera os timers avançarem) trava para sempre. O teste
+   "calcula ao clicar em Recalcular" foi trocado para timers reais: o
+   `setTimeout(0)` real de `recalcularArranjo` é rápido o bastante para o polling
+   padrão do `findByText` capturá-lo sem precisar de `vi.advanceTimersByTime`.
+
+**Ajustes de infraestrutura:**
+
+- `.prettierignore` (revisão pós-Plano 1) inclui `CLAUDE.md`: sem isso o Prettier
+  reformatava blocos de código dentro do markdown, quebrando a indentação.
 
 ## Cobertura da spec por este plano
 

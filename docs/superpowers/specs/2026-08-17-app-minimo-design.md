@@ -258,3 +258,7 @@ calculado ainda" + o botão, em vez de uma cena 3D vazia sem explicação —
   a edição ao primeiro erro de gravação.
 - **S3** — `recalcularArranjo` usa sempre `iteracoes: 20000` (o mesmo valor validado no
   cenário de regressão do plano 1) — não é configurável pelo usuário neste plano.
+- **S4** — Convenção de eixos da cena: X centralizado na largura da estante; Y com
+  origem no chão (`alturaDaBaseMm` do compartimento); Z centralizado na profundidade
+  do compartimento (jogos não são encostados no fundo nem na frente). Não estava na
+  spec original; decidido na implementação de `cena/mapear.ts`.

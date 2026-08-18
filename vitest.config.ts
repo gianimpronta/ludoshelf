@@ -1,9 +1,10 @@
 import { defineConfig } from 'vitest/config'
 
-// `projects` substituiu `workspace`, deprecado no Vitest 3.2. Com um pacote só
-// isso parece exagero, mas o pacote `proxy` entra no plano 4 e a raiz já fica pronta.
+// Dois projetos dentro do mesmo pacote app: um para a UI (jsdom), um para o
+// núcleo (node). Verificado nesta sessão — a alternativa de um único config
+// com `environmentMatchGlobs` não funcionou.
 export default defineConfig({
   test: {
-    projects: ['app'],
+    projects: ['app/vite.config.ts', 'app/vitest.nucleo.config.ts'],
   },
 })
