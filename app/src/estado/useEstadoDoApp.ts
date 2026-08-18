@@ -69,7 +69,10 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
   async salvarJogo(jogo) {
     const { repositorio, jogos, geracao } = get()
     const semODuplicado = jogos.filter((j) => j.id !== jogo.id)
-    set({ jogos: [...semODuplicado, jogo], arranjo: null, geracao: geracao + 1 })
+    // `calculando: false` aqui também: sem isso, invalidar um cálculo em
+    // andamento (via `geracao`) faz `recalcularArranjo` pular o `set` final
+    // inteiro, e a tela ficaria presa em "Calculando…" (CodeRabbit, PR #2).
+    set({ jogos: [...semODuplicado, jogo], arranjo: null, calculando: false, geracao: geracao + 1 })
     await repositorio.salvarJogo(jogo)
   },
 
@@ -84,7 +87,7 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
     const semODependentes = jogos
       .filter((jogo) => jogo.id !== id)
       .map((jogo) => (jogo.idJogoBase === id ? { ...jogo, idJogoBase: null } : jogo))
-    set({ jogos: semODependentes, arranjo: null, geracao: geracao + 1 })
+    set({ jogos: semODependentes, arranjo: null, calculando: false, geracao: geracao + 1 })
     await Promise.all(
       dependentes.map((jogo) => repositorio.salvarJogo({ ...jogo, idJogoBase: null })),
     )
@@ -98,6 +101,7 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
       estantes: [...semADuplicada, estante],
       estanteAtivaId: estanteAtivaId ?? estante.id,
       arranjo: null,
+      calculando: false,
       geracao: geracao + 1,
     })
     await repositorio.salvarEstante(estante)
@@ -105,7 +109,7 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
 
   selecionarEstante(id) {
     const { geracao } = get()
-    set({ estanteAtivaId: id, arranjo: null, geracao: geracao + 1 })
+    set({ estanteAtivaId: id, arranjo: null, calculando: false, geracao: geracao + 1 })
   },
 
   recalcularArranjo() {

@@ -170,4 +170,25 @@ describe('recalcularArranjo', () => {
     expect(useEstadoDoApp.getState().calculando).toBe(false)
     expect(useEstadoDoApp.getState().arranjo?.posicoes).toHaveLength(1)
   })
+
+  it('limpa calculando quando uma mutacao invalida o calculo em andamento', async () => {
+    // CodeRabbit, PR #2: a guarda de geracao evita publicar um Arranjo
+    // obsoleto, mas ao pular o `set` inteiro (linhas 129-131) tambem pulava
+    // o `calculando: false` — a tela ficaria presa em "Calculando..." para
+    // sempre se o usuario editasse algo antes do calculo terminar.
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+    await useEstadoDoApp.getState().salvarEstante(estante('e1'))
+    await useEstadoDoApp.getState().salvarJogo(jogo('a'))
+
+    useEstadoDoApp.getState().recalcularArranjo()
+    expect(useEstadoDoApp.getState().calculando).toBe(true)
+
+    // Uma mutacao chega antes do calculo terminar.
+    await useEstadoDoApp.getState().salvarJogo(jogo('b'))
+
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(useEstadoDoApp.getState().calculando).toBe(false)
+  })
 })
