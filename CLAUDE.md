@@ -22,10 +22,20 @@ Spec em `docs/superpowers/specs/`, planos em `docs/superpowers/plans/`.
 
 ## GitHub / CodeRabbit
 
+- Ao implementar "direta" (sem subagentes), crie a branch **antes** do primeiro
+  commit — nada no modo "direta" isenta da regra de nunca commitar em `main`.
+  Esquecer isso custou um `reset --hard` + branch + `push --force-with-lease` depois.
+- O CodeRabbit pode empurrar um commit `fix: apply CodeRabbit auto-fixes` direto na
+  branch da PR enquanto você trabalha localmente — `git fetch`/rebase antes de dar
+  push de novo. Trate esses auto-fixes como sugestão, não verdade: já teve um com
+  erro de sinal (`+ alturaLivreMm/2` em vez de `-`) que trocava um bug por outro.
 - `gh pr comment N --body "@coderabbitai review"` não força nada se ele já revisou o
   push automaticamente — responde "Already reviewed". A revisão roda sozinha a cada push.
+  Mas se o check aparecer "rate limited" (não "completed"), o comentário força uma
+  passada nova.
 - Comentários inline: `gh api repos/<owner>/<repo>/pulls/N/comments`. Responder a um:
-  `gh api repos/<owner>/<repo>/pulls/N/comments/<id>/replies -f body="..."`.
+  `gh api repos/<owner>/<repo>/pulls/N/comments/<id>/replies -f body="..."` — o número
+  da PR é obrigatório no path; `pulls/comments/<id>/replies` sem ele dá 404.
 - Resolver threads via GraphQL quando o bot não consegue sozinho ("retry or resolve
   manually"): `gh api graphql -f query='mutation { resolveReviewThread(input:
   {threadId: "PRRT_..."}) { thread { isResolved } } }'`. IDs de thread saem de uma
@@ -58,6 +68,13 @@ Spec em `docs/superpowers/specs/`, planos em `docs/superpowers/plans/`.
   `posicoes.length + naoAlocados.length` contra o total — um ID duplicado mais um ID
   ausente se cancelam. Confira `Set.size === array.length` em cada lado, e compare a
   união dos IDs de saída com o conjunto esperado de entrada.
+- `<Canvas>` do react-three-fiber precisa de um pai com altura explícita (`height` em
+  px) — sem isso ele colapsa para o padrão 300x150. jsdom não faz layout de verdade,
+  então só aparece em verificação manual no navegador.
+- `vi.useFakeTimers()` quebra qualquer teste que monte um `<Canvas>` do r3f: o loop de
+  render usa `requestAnimationFrame`, que fica fake também, e como o r3f reagenda a si
+  mesmo a cada frame isso vira recursão infinita — `userEvent.click` trava para sempre.
+  Use timers reais nesses testes.
 
 ## PowerShell
 
