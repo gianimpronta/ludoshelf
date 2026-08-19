@@ -68,9 +68,10 @@ Spec em `docs/superpowers/specs/`, planos em `docs/superpowers/plans/`.
   `posicoes.length + naoAlocados.length` contra o total — um ID duplicado mais um ID
   ausente se cancelam. Confira `Set.size === array.length` em cada lado, e compare a
   união dos IDs de saída com o conjunto esperado de entrada.
-- `<Canvas>` do react-three-fiber precisa de um pai com altura explícita (`height` em
-  px) — sem isso ele colapsa para o padrão 300x150. jsdom não faz layout de verdade,
-  então só aparece em verificação manual no navegador.
+- `<Canvas>` do react-three-fiber precisa de um pai com altura computada e não-nula
+  (não basta `height: 100%` num pai sem altura própria) — sem isso ele colapsa para
+  o padrão do `<canvas>`, 300x150 (achado em verificação manual, não em teste — jsdom
+  não faz layout de verdade).
 - `vi.useFakeTimers()` quebra qualquer teste que monte um `<Canvas>` do r3f: o loop de
   render usa `requestAnimationFrame`, que fica fake também, e como o r3f reagenda a si
   mesmo a cada frame isso vira recursão infinita — `userEvent.click` trava para sempre.
