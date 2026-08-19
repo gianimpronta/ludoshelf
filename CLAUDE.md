@@ -86,3 +86,5 @@ Spec em `docs/superpowers/specs/`, planos em `docs/superpowers/plans/`.
 - BGG: exige `Authorization: Bearer` de aplicação. Medidas só nos itens de versão, em
   polegadas, frequentemente ausentes ou zeradas.
 - Tokens vivem só em `.env` do proxy, nunca no bundle do navegador.
+
+- 
