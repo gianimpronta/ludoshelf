@@ -12,13 +12,27 @@ export function App() {
   const erroDePersistencia = useEstadoDoApp((estado) => estado.erroDePersistencia)
 
   return (
-    <main>
-      <h1>LudoShelf</h1>
+    <main className="app-container">
+      <header className="cabecalho-app">
+        <div className="cabecalho-marca">
+          <span className="logo-icone" aria-hidden="true">
+            🎲
+          </span>
+          <div>
+            <h1>LudoShelf</h1>
+            <p className="subtitulo-app">Organizador 3D para estantes de jogos de tabuleiro</p>
+          </div>
+        </div>
+        <span className="badge-versao">v1.0</span>
+      </header>
+
       <Banner mensagem={erroDePersistencia} />
       <Abas telaAtiva={telaAtiva} aoTrocar={irParaTela} />
-      {telaAtiva === 'estantes' && <TelaDeEstantes />}
-      {telaAtiva === 'colecao' && <TelaDeColecao />}
-      {telaAtiva === 'arranjo' && <TelaDeArranjo />}
+      <div className="conteudo-tela">
+        {telaAtiva === 'estantes' && <TelaDeEstantes />}
+        {telaAtiva === 'colecao' && <TelaDeColecao />}
+        {telaAtiva === 'arranjo' && <TelaDeArranjo />}
+      </div>
     </main>
   )
 }

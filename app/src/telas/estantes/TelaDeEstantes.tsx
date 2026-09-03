@@ -11,29 +11,51 @@ export function TelaDeEstantes() {
 
   return (
     <section>
-      <h2>Estantes</h2>
-      <FormularioDeEstante
-        aoSalvar={(definicao) => {
-          const id = crypto.randomUUID()
-          salvarEstante(montarEstante(id, definicao))
-        }}
-      />
+      <div className="tela-grid-duplo">
+        <div className="card-painel">
+          <div className="card-cabecalho">
+            <h2>Estantes</h2>
+          </div>
+          <FormularioDeEstante
+            aoSalvar={(definicao) => {
+              const id = crypto.randomUUID()
+              salvarEstante(montarEstante(id, definicao))
+            }}
+          />
+        </div>
 
-      <h3>Suas estantes</h3>
-      {estantes.length === 0 ? (
-        <p>Nenhuma estante cadastrada ainda.</p>
-      ) : (
-        <ul>
-          {estantes.map((estante) => (
-            <li key={estante.id}>
-              <button type="button" onClick={() => selecionarEstante(estante.id)}>
-                {estante.nome}
-                {estante.id === estanteAtivaId ? ' (ativa)' : ''}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+        <div className="card-painel">
+          <div className="card-cabecalho">
+            <h3>Suas estantes</h3>
+          </div>
+          {estantes.length === 0 ? (
+            <div className="estado-vazio">
+              <p>Nenhuma estante cadastrada ainda.</p>
+            </div>
+          ) : (
+            <ul className="lista-estantes">
+              {estantes.map((estante) => (
+                <li key={estante.id}>
+                  <button
+                    type="button"
+                    className={`item-estante-botao ${estante.id === estanteAtivaId ? 'item-estante-ativa' : ''}`}
+                    onClick={() => selecionarEstante(estante.id)}
+                  >
+                    <span>{estante.nome}</span>
+                    {estante.id === estanteAtivaId ? (
+                      <span className="badge-ativa">✓ ativa</span>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        clique para ativar
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </section>
   )
 }

@@ -10,9 +10,21 @@ export function TelaDeColecao() {
 
   return (
     <section>
-      <h2>Coleção</h2>
-      <FormularioDeJogo jogosExistentes={jogos} aoSalvar={salvarJogo} />
-      <TabelaDeJogos jogos={jogos} aoRemover={removerJogo} />
+      <div className="tela-grid-duplo">
+        <div className="card-painel">
+          <div className="card-cabecalho">
+            <h2>Coleção</h2>
+          </div>
+          <FormularioDeJogo jogosExistentes={jogos} aoSalvar={salvarJogo} />
+        </div>
+
+        <div className="card-painel">
+          <div className="card-cabecalho">
+            <h3>Seus jogos ({jogos.length})</h3>
+          </div>
+          <TabelaDeJogos jogos={jogos} aoRemover={removerJogo} />
+        </div>
+      </div>
     </section>
   )
 }

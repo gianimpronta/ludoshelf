@@ -9,12 +9,13 @@ const ROTULOS: Record<Tela, string> = {
 /** Navegação por abas sem URL (spec D2). */
 export function Abas({ telaAtiva, aoTrocar }: { telaAtiva: Tela; aoTrocar: (tela: Tela) => void }) {
   return (
-    <nav role="tablist">
+    <nav role="tablist" className="navegacao-abas">
       {(Object.keys(ROTULOS) as Tela[]).map((tela) => (
         <button
           key={tela}
           type="button"
           role="tab"
+          className="aba-botao"
           aria-selected={tela === telaAtiva}
           onClick={() => aoTrocar(tela)}
         >

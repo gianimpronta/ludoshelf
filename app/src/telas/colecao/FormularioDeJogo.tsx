@@ -54,40 +54,89 @@ export function FormularioDeJogo({
   }
 
   return (
-    <form onSubmit={aoSubmeter}>
-      {erro !== null && <p role="alert">{erro}</p>}
+    <form onSubmit={aoSubmeter} className="formulario-estilizado">
+      {erro !== null && (
+        <p role="alert" className="mensagem-erro">
+          {erro}
+        </p>
+      )}
 
-      <label htmlFor="jogo-nome">Nome</label>
-      <input id="jogo-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+      <div className="campo-grupo">
+        <label htmlFor="jogo-nome">Nome</label>
+        <input
+          id="jogo-nome"
+          className="input-texto"
+          placeholder="Ex: Catan, Wingspan, Ticket to Ride"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+        />
+      </div>
 
-      <label htmlFor="jogo-lado-a">Lado A (mm)</label>
-      <input id="jogo-lado-a" value={ladoA} onChange={(e) => setLadoA(e.target.value)} />
+      <div className="campo-linha-tripla">
+        <div className="campo-grupo">
+          <label htmlFor="jogo-lado-a">Lado A (mm)</label>
+          <input
+            id="jogo-lado-a"
+            className="input-texto"
+            placeholder="Ex: 295"
+            value={ladoA}
+            onChange={(e) => setLadoA(e.target.value)}
+          />
+        </div>
 
-      <label htmlFor="jogo-lado-b">Lado B (mm)</label>
-      <input id="jogo-lado-b" value={ladoB} onChange={(e) => setLadoB(e.target.value)} />
+        <div className="campo-grupo">
+          <label htmlFor="jogo-lado-b">Lado B (mm)</label>
+          <input
+            id="jogo-lado-b"
+            className="input-texto"
+            placeholder="Ex: 295"
+            value={ladoB}
+            onChange={(e) => setLadoB(e.target.value)}
+          />
+        </div>
 
-      <label htmlFor="jogo-espessura">Espessura (mm)</label>
-      <input id="jogo-espessura" value={espessura} onChange={(e) => setEspessura(e.target.value)} />
+        <div className="campo-grupo">
+          <label htmlFor="jogo-espessura">Espessura (mm)</label>
+          <input
+            id="jogo-espessura"
+            className="input-texto"
+            placeholder="Ex: 70"
+            value={espessura}
+            onChange={(e) => setEspessura(e.target.value)}
+          />
+        </div>
+      </div>
 
-      <label htmlFor="jogo-destaque">Destaque</label>
-      <input
-        id="jogo-destaque"
-        type="checkbox"
-        checked={destaque}
-        onChange={(e) => setDestaque(e.target.checked)}
-      />
+      <div className="campo-checkbox-linha">
+        <input
+          id="jogo-destaque"
+          type="checkbox"
+          checked={destaque}
+          onChange={(e) => setDestaque(e.target.checked)}
+        />
+        <label htmlFor="jogo-destaque">Destaque</label>
+      </div>
 
-      <label htmlFor="jogo-base">Jogo-base (se for expansão)</label>
-      <select id="jogo-base" value={idJogoBase} onChange={(e) => setIdJogoBase(e.target.value)}>
-        <option value="">— nenhum —</option>
-        {jogosExistentes.map((jogo) => (
-          <option key={jogo.id} value={jogo.id}>
-            {jogo.nome}
-          </option>
-        ))}
-      </select>
+      <div className="campo-grupo">
+        <label htmlFor="jogo-base">Jogo-base (se for expansão)</label>
+        <select
+          id="jogo-base"
+          className="select-estilizado"
+          value={idJogoBase}
+          onChange={(e) => setIdJogoBase(e.target.value)}
+        >
+          <option value="">— nenhum —</option>
+          {jogosExistentes.map((jogo) => (
+            <option key={jogo.id} value={jogo.id}>
+              {jogo.nome}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <button type="submit">Salvar jogo</button>
+      <button type="submit" className="btn-primario">
+        Salvar jogo
+      </button>
     </form>
   )
 }

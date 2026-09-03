@@ -31,34 +31,50 @@ export function TelaDeArranjo() {
 
   return (
     <section>
-      <h2>Arranjo</h2>
-      <button type="button" onClick={recalcularArranjo} disabled={estanteAtiva === undefined}>
-        Recalcular arranjo
-      </button>
-
-      {calculando && <p role="status">Calculando…</p>}
-      {arranjo === null ? (
-        calculando ? null : <p>Nenhum arranjo calculado ainda.</p>
-      ) : (
-        <div style={{ opacity: calculando ? 0.4 : 1, transition: 'opacity 200ms' }}>
-          {estanteAtiva !== undefined && contexto !== null && (
-            // O <Canvas> do react-three-fiber preenche 100% do pai; sem uma
-            // altura explícita aqui, o pai colapsa e o r3f cai no tamanho
-            // padrão de 300x150 (achado na verificação manual da Task 14).
-            <div style={{ width: '100%', height: '500px' }}>
-              <LimiteDeErroDaCena>
-                <CenaDoArranjo
-                  arranjo={arranjo}
-                  contexto={contexto}
-                  estante={estanteAtiva}
-                  aoClicarJogo={() => irParaTela('colecao')}
-                />
-              </LimiteDeErroDaCena>
-            </div>
-          )}
-          <PainelDeNaoAlocados naoAlocados={arranjo.naoAlocados} nomePorId={nomePorId} />
+      <div className="card-painel">
+        <div className="painel-arranjo-controles">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <h2>Arranjo</h2>
+            {calculando && (
+              <p role="status" className="status-calculando">
+                Calculando…
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn-primario"
+            onClick={recalcularArranjo}
+            disabled={estanteAtiva === undefined}
+          >
+            Recalcular arranjo
+          </button>
         </div>
-      )}
+
+        {arranjo === null ? (
+          calculando ? null : (
+            <div className="estado-vazio">
+              <p>Nenhum arranjo calculado ainda.</p>
+            </div>
+          )
+        ) : (
+          <div style={{ opacity: calculando ? 0.4 : 1, transition: 'opacity 200ms' }}>
+            {estanteAtiva !== undefined && contexto !== null && (
+              <div className="canvas-container-3d" style={{ width: '100%', height: '520px' }}>
+                <LimiteDeErroDaCena>
+                  <CenaDoArranjo
+                    arranjo={arranjo}
+                    contexto={contexto}
+                    estante={estanteAtiva}
+                    aoClicarJogo={() => irParaTela('colecao')}
+                  />
+                </LimiteDeErroDaCena>
+              </div>
+            )}
+            <PainelDeNaoAlocados naoAlocados={arranjo.naoAlocados} nomePorId={nomePorId} />
+          </div>
+        )}
+      </div>
     </section>
   )
 }
