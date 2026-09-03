@@ -88,8 +88,10 @@ export function ModalImportarCsv({
       // Auto-detecção de colunas
       const cabs = parseado.cabecalhos
       setColunaNome(sugerirColuna(cabs, ['nome', 'jogo', 'title', 'game']) || (cabs[0] ?? ''))
-      setColunaMaiorMm(sugerirColuna(cabs, ['comprimento', 'maior', 'ladoa', 'length', 'largura']))
-      setColunaMenorMm(sugerirColuna(cabs, ['ladob', 'menor', 'width', 'profundidade']))
+      setColunaMaiorMm(sugerirColuna(cabs, ['comprimento', 'maior', 'ladoa', 'lado a', 'length']))
+      setColunaMenorMm(
+        sugerirColuna(cabs, ['largura', 'ladob', 'lado b', 'menor', 'width', 'profundidade']),
+      )
       setColunaEspessuraMm(
         sugerirColuna(cabs, ['espessura', 'altura', 'height', 'depth', 'thickness']),
       )
@@ -137,31 +139,35 @@ export function ModalImportarCsv({
       return
     }
 
-    setErro(null)
-    const mapeamento: MapeamentoDeColunas = {
-      colunaNome,
-      colunaMaiorMm: colunaMaiorMm || undefined,
-      colunaMenorMm: colunaMenorMm || undefined,
-      colunaEspessuraMm: colunaEspessuraMm || undefined,
-      colunaUnidade: colunaUnidade || undefined,
-      colunaJogoBase: colunaJogoBase || undefined,
-      colunaPartidas: colunaPartidas || undefined,
+    try {
+      setErro(null)
+      const mapeamento: MapeamentoDeColunas = {
+        colunaNome,
+        colunaMaiorMm: colunaMaiorMm || undefined,
+        colunaMenorMm: colunaMenorMm || undefined,
+        colunaEspessuraMm: colunaEspessuraMm || undefined,
+        colunaUnidade: colunaUnidade || undefined,
+        colunaJogoBase: colunaJogoBase || undefined,
+        colunaPartidas: colunaPartidas || undefined,
+      }
+
+      const processado = await processarCsv(dadosCsv, {
+        catalogo,
+        opcoes: {
+          mapeamento,
+          unidadePadrao,
+          politicaDuplicatas,
+          tentarCompletarComCatalogo: tentarCatalogo,
+          nomeDoArquivo: nomeArquivo,
+        },
+        jogosExistentes,
+      })
+
+      setResultadoProcessamento(processado)
+      setPasso('revisao')
+    } catch (excecao) {
+      setErro(excecao instanceof Error ? excecao.message : String(excecao))
     }
-
-    const processado = await processarCsv(dadosCsv, {
-      catalogo,
-      opcoes: {
-        mapeamento,
-        unidadePadrao,
-        politicaDuplicatas,
-        tentarCompletarComCatalogo: tentarCatalogo,
-        nomeDoArquivo: nomeArquivo,
-      },
-      jogosExistentes,
-    })
-
-    setResultadoProcessamento(processado)
-    setPasso('revisao')
   }
 
   async function aoConfirmarImportacao(): Promise<void> {
