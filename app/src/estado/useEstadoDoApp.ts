@@ -5,6 +5,8 @@ import { geradorMulberry32 } from '../nucleo/gerador.js'
 import type { CaixaDeJogo, IdJogo } from '../nucleo/jogo.js'
 import { arranjar } from '../nucleo/motor.js'
 import { PESOS_PADRAO } from '../nucleo/pontuacao.js'
+import type { CatalogoDeJogos } from '../catalogo/CatalogoDeJogos.js'
+import { CatalogoSemeado } from '../catalogo/CatalogoSemeado.js'
 import type { RepositorioDeColecao } from '../persistencia/RepositorioDeColecao.js'
 import { RepositorioEmMemoria } from '../persistencia/RepositorioEmMemoria.js'
 
@@ -21,10 +23,12 @@ export interface EstadoDoApp {
   readonly erroDePersistencia: string | null
 
   readonly repositorio: RepositorioDeColecao
+  readonly catalogo: CatalogoDeJogos
   readonly geracao: number
 
-  inicializar(repositorio: RepositorioDeColecao): Promise<void>
+  inicializar(repositorio: RepositorioDeColecao, catalogo?: CatalogoDeJogos): Promise<void>
   salvarJogo(jogo: CaixaDeJogo): Promise<void>
+  salvarJogos(jogos: readonly CaixaDeJogo[]): Promise<void>
   removerJogo(id: IdJogo): Promise<void>
   salvarEstante(estante: Estante): Promise<void>
   selecionarEstante(id: string): void
@@ -41,23 +45,31 @@ const estadoInicial = {
   calculando: false,
   erroDePersistencia: null as string | null,
   repositorio: new RepositorioEmMemoria() as RepositorioDeColecao,
+  catalogo: new CatalogoSemeado() as CatalogoDeJogos,
   geracao: 0,
 }
 
 export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
   ...estadoInicial,
 
-  async inicializar(repositorio) {
+  async inicializar(repositorio, catalogo) {
     try {
       const [jogos, estantes] = await Promise.all([
         repositorio.carregarJogos(),
         repositorio.carregarEstantes(),
       ])
-      set({ repositorio, jogos, estantes, erroDePersistencia: null })
+      set({
+        repositorio,
+        catalogo: catalogo ?? get().catalogo,
+        jogos,
+        estantes,
+        erroDePersistencia: null,
+      })
     } catch {
       // Fallback automático (spec §7): o app segue funcional, sem persistir.
       set({
         repositorio: new RepositorioEmMemoria(),
+        catalogo: catalogo ?? get().catalogo,
         jogos: [],
         estantes: [],
         erroDePersistencia:
@@ -74,6 +86,15 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
     // inteiro, e a tela ficaria presa em "Calculando…" (CodeRabbit, PR #2).
     set({ jogos: [...semODuplicado, jogo], arranjo: null, calculando: false, geracao: geracao + 1 })
     await repositorio.salvarJogo(jogo)
+  },
+
+  async salvarJogos(novosJogos) {
+    const { repositorio, jogos, geracao } = get()
+    const mapaNovos = new Map(novosJogos.map((j) => [j.id, j]))
+    const mantidos = jogos.filter((j) => !mapaNovos.has(j.id))
+    const atualizados = [...mantidos, ...novosJogos]
+    set({ jogos: atualizados, arranjo: null, calculando: false, geracao: geracao + 1 })
+    await repositorio.salvarJogos(novosJogos)
   },
 
   async removerJogo(id) {
