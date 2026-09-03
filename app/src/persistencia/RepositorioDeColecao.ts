@@ -10,6 +10,8 @@ export interface RepositorioDeColecao {
   carregarJogos(): Promise<readonly CaixaDeJogo[]>
   /** Upsert: cadastro manual e edição são a mesma operação. */
   salvarJogo(jogo: CaixaDeJogo): Promise<void>
+  /** Upsert em lote (usado na importação de CSV). */
+  salvarJogos(jogos: readonly CaixaDeJogo[]): Promise<void>
   removerJogo(id: IdJogo): Promise<void>
   carregarEstantes(): Promise<readonly Estante[]>
   salvarEstante(estante: Estante): Promise<void>

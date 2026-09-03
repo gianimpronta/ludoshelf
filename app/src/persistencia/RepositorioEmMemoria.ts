@@ -20,6 +20,12 @@ export class RepositorioEmMemoria implements RepositorioDeColecao {
     this.jogos.set(jogo.id, jogo)
   }
 
+  async salvarJogos(jogos: readonly CaixaDeJogo[]): Promise<void> {
+    for (const jogo of jogos) {
+      this.jogos.set(jogo.id, jogo)
+    }
+  }
+
   async removerJogo(id: IdJogo): Promise<void> {
     this.jogos.delete(id)
   }

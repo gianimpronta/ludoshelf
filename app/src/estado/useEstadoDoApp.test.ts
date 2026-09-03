@@ -50,6 +50,7 @@ describe('inicializar', () => {
     const repositorioQuebrado = {
       carregarJogos: () => Promise.reject(new Error('IndexedDB indisponível')),
       salvarJogo: () => Promise.resolve(),
+      salvarJogos: () => Promise.resolve(),
       removerJogo: () => Promise.resolve(),
       carregarEstantes: () => Promise.resolve([]),
       salvarEstante: () => Promise.resolve(),
