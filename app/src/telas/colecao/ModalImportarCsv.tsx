@@ -1,0 +1,468 @@
+import { useState } from 'react'
+import type { CatalogoDeJogos } from '../../catalogo/CatalogoDeJogos.js'
+import { parsearCsv, type ResultadoParseCsv } from '../../importacao/leitorCsv.js'
+import { processarCsv } from '../../importacao/processarCsv.js'
+import { gerarTemplateCsv } from '../../importacao/templateCsv.js'
+import type {
+  MapeamentoDeColunas,
+  PoliticaDuplicatas,
+  ResultadoProcessamentoCsv,
+  UnidadeDeComprimento,
+} from '../../importacao/tipos.js'
+import type { CaixaDeJogo } from '../../nucleo/jogo.js'
+import { TabelaDeRelatorio } from './TabelaDeRelatorio.js'
+
+type Passo = 'upload' | 'mapeamento' | 'revisao' | 'concluido'
+
+function sugerirColuna(cabecalhos: readonly string[], palavrasChave: readonly string[]): string {
+  for (const cab of cabecalhos) {
+    const min = cab.toLowerCase()
+    if (palavrasChave.some((p) => min.includes(p))) {
+      return cab
+    }
+  }
+  return ''
+}
+
+export function ModalImportarCsv({
+  catalogo,
+  jogosExistentes,
+  aoSalvarJogos,
+  aoFechar,
+}: {
+  catalogo: CatalogoDeJogos
+  jogosExistentes: readonly CaixaDeJogo[]
+  aoSalvarJogos: (jogos: readonly CaixaDeJogo[]) => Promise<void>
+  aoFechar: () => void
+}) {
+  const [passo, setPasso] = useState<Passo>('upload')
+  const [nomeArquivo, setNomeArquivo] = useState<string>('')
+  const [dadosCsv, setDadosCsv] = useState<ResultadoParseCsv | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  // Mapeamento e Opções
+  const [colunaNome, setColunaNome] = useState('')
+  const [colunaMaiorMm, setColunaMaiorMm] = useState('')
+  const [colunaMenorMm, setColunaMenorMm] = useState('')
+  const [colunaEspessuraMm, setColunaEspessuraMm] = useState('')
+  const [colunaUnidade, setColunaUnidade] = useState('')
+  const [colunaJogoBase, setColunaJogoBase] = useState('')
+  const [colunaPartidas, setColunaPartidas] = useState('')
+
+  const [unidadePadrao, setUnidadePadrao] = useState<UnidadeDeComprimento>('mm')
+  const [politicaDuplicatas, setPoliticaDuplicatas] = useState<PoliticaDuplicatas>('substituir')
+  const [tentarCatalogo, setTentarCatalogo] = useState(true)
+
+  const [resultadoProcessamento, setResultadoProcessamento] =
+    useState<ResultadoProcessamentoCsv | null>(null)
+  const [salvando, setSalvando] = useState(false)
+
+  function aoBaixarTemplate(): void {
+    const csv = gerarTemplateCsv()
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'template-ludoshelf.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  async function aoSelecionarArquivo(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const arquivo = e.target.files?.[0]
+    if (!arquivo) return
+
+    try {
+      setErro(null)
+      const conteudo = await arquivo.text()
+      const parseado = parsearCsv(conteudo)
+
+      if (parseado.cabecalhos.length === 0 || parseado.linhas.length === 0) {
+        setErro('O arquivo CSV parece vazio ou sem cabeçalhos.')
+        return
+      }
+
+      setNomeArquivo(arquivo.name)
+      setDadosCsv(parseado)
+
+      // Auto-detecção de colunas
+      const cabs = parseado.cabecalhos
+      setColunaNome(sugerirColuna(cabs, ['nome', 'jogo', 'title', 'game']) || (cabs[0] ?? ''))
+      setColunaMaiorMm(sugerirColuna(cabs, ['comprimento', 'maior', 'ladoa', 'length', 'largura']))
+      setColunaMenorMm(sugerirColuna(cabs, ['ladob', 'menor', 'width', 'profundidade']))
+      setColunaEspessuraMm(
+        sugerirColuna(cabs, ['espessura', 'altura', 'height', 'depth', 'thickness']),
+      )
+      setColunaUnidade(sugerirColuna(cabs, ['unidade', 'unit']))
+      setColunaJogoBase(sugerirColuna(cabs, ['base', 'parent', 'jogo-base']))
+      setColunaPartidas(sugerirColuna(cabs, ['partida', 'play']))
+
+      setPasso('mapeamento')
+    } catch (excecao) {
+      setErro(excecao instanceof Error ? excecao.message : String(excecao))
+    }
+  }
+
+  async function aoAvancarParaRevisao(): Promise<void> {
+    if (!dadosCsv) return
+    if (!colunaNome) {
+      setErro('Selecione a coluna que contém o Nome do jogo.')
+      return
+    }
+
+    setErro(null)
+    const mapeamento: MapeamentoDeColunas = {
+      colunaNome,
+      colunaMaiorMm: colunaMaiorMm || undefined,
+      colunaMenorMm: colunaMenorMm || undefined,
+      colunaEspessuraMm: colunaEspessuraMm || undefined,
+      colunaUnidade: colunaUnidade || undefined,
+      colunaJogoBase: colunaJogoBase || undefined,
+      colunaPartidas: colunaPartidas || undefined,
+    }
+
+    const processado = await processarCsv(dadosCsv, {
+      catalogo,
+      opcoes: {
+        mapeamento,
+        unidadePadrao,
+        politicaDuplicatas,
+        tentarCompletarComCatalogo: tentarCatalogo,
+        nomeDoArquivo: nomeArquivo,
+      },
+      jogosExistentes,
+    })
+
+    setResultadoProcessamento(processado)
+    setPasso('revisao')
+  }
+
+  async function aoConfirmarImportacao(): Promise<void> {
+    if (!resultadoProcessamento) return
+    try {
+      setSalvando(true)
+      await aoSalvarJogos(resultadoProcessamento.jogosProntosParaSalvar)
+      setPasso('concluido')
+    } catch (excecao) {
+      setErro(excecao instanceof Error ? excecao.message : String(excecao))
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+      <div className="modal-conteudo card-painel">
+        <div className="card-cabecalho">
+          <h3 id="modal-titulo">Importar Coleção via CSV</h3>
+          <button type="button" className="btn-fechar" onClick={aoFechar} aria-label="Fechar modal">
+            ✕
+          </button>
+        </div>
+
+        {erro !== null && (
+          <p role="alert" className="mensagem-erro">
+            {erro}
+          </p>
+        )}
+
+        {passo === 'upload' && (
+          <div className="fluxo-upload">
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Selecione seu arquivo CSV exportado da Ludopedia, BGG ou de sua planilha pessoal.
+            </p>
+
+            <div className="zona-upload">
+              <label htmlFor="csv-input-file" className="label-upload">
+                📂 <strong>Clique para escolher um arquivo CSV</strong>
+              </label>
+              <input
+                id="csv-input-file"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={aoSelecionarArquivo}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              <button type="button" className="btn-secundario" onClick={aoBaixarTemplate}>
+                📥 Baixar modelo CSV recomendado
+              </button>
+            </div>
+          </div>
+        )}
+
+        {passo === 'mapeamento' && dadosCsv && (
+          <div className="fluxo-mapeamento formulario-estilizado">
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Arquivo: <strong>{nomeArquivo}</strong> ({dadosCsv.linhas.length} linhas detectadas)
+            </p>
+
+            <div className="campo-grupo">
+              <label htmlFor="map-nome">Coluna do Nome do Jogo *</label>
+              <select
+                id="map-nome"
+                className="select-estilizado"
+                value={colunaNome}
+                onChange={(e) => setColunaNome(e.target.value)}
+              >
+                <option value="">Selecione...</option>
+                {dadosCsv.cabecalhos.map((cab) => (
+                  <option key={cab} value={cab}>
+                    {cab}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="campo-linha-tripla">
+              <div className="campo-grupo">
+                <label htmlFor="map-maior">Comprimento / Lado A</label>
+                <select
+                  id="map-maior"
+                  className="select-estilizado"
+                  value={colunaMaiorMm}
+                  onChange={(e) => setColunaMaiorMm(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo-grupo">
+                <label htmlFor="map-menor">Largura / Lado B</label>
+                <select
+                  id="map-menor"
+                  className="select-estilizado"
+                  value={colunaMenorMm}
+                  onChange={(e) => setColunaMenorMm(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo-grupo">
+                <label htmlFor="map-espessura">Espessura / Altura</label>
+                <select
+                  id="map-espessura"
+                  className="select-estilizado"
+                  value={colunaEspessuraMm}
+                  onChange={(e) => setColunaEspessuraMm(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="campo-linha-dupla">
+              <div className="campo-grupo">
+                <label htmlFor="map-unidade">Coluna de Unidade</label>
+                <select
+                  id="map-unidade"
+                  className="select-estilizado"
+                  value={colunaUnidade}
+                  onChange={(e) => setColunaUnidade(e.target.value)}
+                >
+                  <option value="">(Usar unidade padrão abaixo)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo-grupo">
+                <label htmlFor="unidade-padrao">Unidade padrão das medidas</label>
+                <select
+                  id="unidade-padrao"
+                  className="select-estilizado"
+                  value={unidadePadrao}
+                  onChange={(e) => setUnidadePadrao(e.target.value as UnidadeDeComprimento)}
+                >
+                  <option value="mm">Milímetros (mm)</option>
+                  <option value="cm">Centímetros (cm)</option>
+                  <option value="in">Polegadas (in)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="campo-linha-dupla">
+              <div className="campo-grupo">
+                <label htmlFor="map-base">Coluna do Jogo-Base (para expansões)</label>
+                <select
+                  id="map-base"
+                  className="select-estilizado"
+                  value={colunaJogoBase}
+                  onChange={(e) => setColunaJogoBase(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo-grupo">
+                <label htmlFor="map-partidas">Coluna de Partidas</label>
+                <select
+                  id="map-partidas"
+                  className="select-estilizado"
+                  value={colunaPartidas}
+                  onChange={(e) => setColunaPartidas(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="campo-linha-dupla">
+              <div className="campo-grupo">
+                <label htmlFor="politica-duplicatas">Se o jogo já existir na coleção</label>
+                <select
+                  id="politica-duplicatas"
+                  className="select-estilizado"
+                  value={politicaDuplicatas}
+                  onChange={(e) => setPoliticaDuplicatas(e.target.value as PoliticaDuplicatas)}
+                >
+                  <option value="substituir">Substituir jogo existente</option>
+                  <option value="ignorar">Ignorar duplicata da planilha</option>
+                </select>
+              </div>
+
+              <div className="campo-grupo" style={{ justifyContent: 'center' }}>
+                <label className="campo-checkbox-linha">
+                  <input
+                    type="checkbox"
+                    checked={tentarCatalogo}
+                    onChange={(e) => setTentarCatalogo(e.target.checked)}
+                  />
+                  <span>Completar medidas faltantes com catálogo semeado</span>
+                </label>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+                marginTop: '16px',
+              }}
+            >
+              <button type="button" className="btn-secundario" onClick={() => setPasso('upload')}>
+                Voltar
+              </button>
+              <button type="button" className="btn-primario" onClick={aoAvancarParaRevisao}>
+                Avançar para Revisão
+              </button>
+            </div>
+          </div>
+        )}
+
+        {passo === 'revisao' && resultadoProcessamento && (
+          <div className="fluxo-revisao">
+            <div
+              className="card-painel"
+              style={{ background: 'var(--bg-surface-elevated)', margin: '16px 0' }}
+            >
+              <h4>Resumo da Leitura</h4>
+              <p>
+                Total de linhas: <strong>{resultadoProcessamento.totalLinhasArquivo}</strong>
+              </p>
+              <p>
+                Jogos prontos para salvar:{' '}
+                <strong style={{ color: 'var(--success)' }}>
+                  {resultadoProcessamento.jogosProntosParaSalvar.length}
+                </strong>
+              </p>
+              {resultadoProcessamento.pendencias.length > 0 && (
+                <p>
+                  Avisos e pendências:{' '}
+                  <strong style={{ color: 'var(--accent-gold)' }}>
+                    {resultadoProcessamento.pendencias.length}
+                  </strong>
+                </p>
+              )}
+              {resultadoProcessamento.erros.length > 0 && (
+                <p>
+                  Erros de leitura:{' '}
+                  <strong style={{ color: 'var(--danger)' }}>
+                    {resultadoProcessamento.erros.length}
+                  </strong>
+                </p>
+              )}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+                marginTop: '20px',
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secundario"
+                onClick={() => setPasso('mapeamento')}
+              >
+                Voltar ao Mapeamento
+              </button>
+              <button
+                type="button"
+                className="btn-primario"
+                disabled={salvando || resultadoProcessamento.jogosProntosParaSalvar.length === 0}
+                onClick={aoConfirmarImportacao}
+              >
+                {salvando
+                  ? 'Salvando...'
+                  : `Confirmar Importação (${resultadoProcessamento.jogosProntosParaSalvar.length})`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {passo === 'concluido' && resultadoProcessamento && (
+          <div className="fluxo-concluido">
+            <TabelaDeRelatorio
+              totalSalvos={resultadoProcessamento.jogosProntosParaSalvar.length}
+              pendencias={resultadoProcessamento.pendencias}
+              erros={resultadoProcessamento.erros}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button type="button" className="btn-primario" onClick={aoFechar}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

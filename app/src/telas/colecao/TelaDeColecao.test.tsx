@@ -42,4 +42,12 @@ describe('TelaDeColecao', () => {
 
     expect(screen.queryByRole('cell', { name: 'Catan' })).not.toBeInTheDocument()
   })
+
+  it('abre o modal de importacao ao clicar no botao Importar CSV', async () => {
+    const usuario = userEvent.setup()
+    render(<TelaDeColecao />)
+
+    await usuario.click(screen.getByRole('button', { name: '📥 Importar CSV' }))
+    expect(screen.getByRole('heading', { name: 'Importar Coleção via CSV' })).toBeInTheDocument()
+  })
 })

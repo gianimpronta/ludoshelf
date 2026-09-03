@@ -588,3 +588,135 @@ body {
 .lista-nao-alocados li {
   margin-bottom: 4px;
 }
+
+/* Modal de Importação */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-conteudo {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-default);
+  animation: modalEntrada 0.2s ease-out;
+}
+
+@keyframes modalEntrada {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.btn-fechar {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.btn-fechar:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+}
+
+.zona-upload {
+  border: 2px dashed rgba(129, 140, 248, 0.4);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 16px 0;
+}
+
+.zona-upload:hover {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.label-upload {
+  cursor: pointer;
+  font-size: 1.05rem;
+  color: #a5b4fc;
+}
+
+.relatorio-importacao {
+  margin: 12px 0;
+}
+
+.relatorio-resumo-sucesso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--success-bg);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+}
+
+.relatorio-resumo-sucesso .icone-sucesso {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.relatorio-lista {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.relatorio-item-pendencia {
+  background: var(--bg-surface-elevated);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-left: 3px solid var(--accent-gold);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.relatorio-item-erro {
+  background: var(--bg-surface-elevated);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-left: 3px solid var(--danger);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: #fda4af;
+}
+
+.badge-linha {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-right: 8px;
+  font-weight: 600;
+}

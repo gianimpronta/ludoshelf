@@ -4,22 +4,22 @@ export type UnidadeDeComprimento = 'mm' | 'cm' | 'in'
 
 export interface MapeamentoDeColunas {
   readonly colunaNome: string
-  readonly colunaMaiorMm?: string
-  readonly colunaMenorMm?: string
-  readonly colunaEspessuraMm?: string
-  readonly colunaUnidade?: string
-  readonly colunaJogoBase?: string
-  readonly colunaPartidas?: string
+  readonly colunaMaiorMm?: string | undefined
+  readonly colunaMenorMm?: string | undefined
+  readonly colunaEspessuraMm?: string | undefined
+  readonly colunaUnidade?: string | undefined
+  readonly colunaJogoBase?: string | undefined
+  readonly colunaPartidas?: string | undefined
 }
 
 export type PoliticaDuplicatas = 'substituir' | 'ignorar' | 'manter-existente'
 
 export interface OpcoesDeImportacao {
   readonly mapeamento: MapeamentoDeColunas
-  readonly unidadePadrao?: UnidadeDeComprimento
+  readonly unidadePadrao?: UnidadeDeComprimento | undefined
   readonly politicaDuplicatas: PoliticaDuplicatas
   readonly tentarCompletarComCatalogo: boolean
-  readonly nomeDoArquivo?: string
+  readonly nomeDoArquivo?: string | undefined
 }
 
 export interface ItemDePendencia {

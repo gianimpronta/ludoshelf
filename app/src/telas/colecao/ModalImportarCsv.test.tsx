@@ -1,0 +1,68 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { CatalogoFalso } from '../../catalogo/CatalogoFalso.js'
+import { ModalImportarCsv } from './ModalImportarCsv.js'
+
+describe('ModalImportarCsv', () => {
+  const catalogoFalso = new CatalogoFalso()
+
+  it('inicia no passo de upload com botao para baixar modelo', () => {
+    render(
+      <ModalImportarCsv
+        catalogo={catalogoFalso}
+        jogosExistentes={[]}
+        aoSalvarJogos={vi.fn()}
+        aoFechar={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Importar Coleção via CSV' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Baixar modelo CSV/ })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Clique para escolher um arquivo CSV/)).toBeInTheDocument()
+  })
+
+  it('avanca pelos passos de mapeamento, revisao e conclusao', async () => {
+    const usuario = userEvent.setup()
+    const aoSalvarJogos = vi.fn().mockResolvedValue(undefined)
+    const aoFechar = vi.fn()
+
+    render(
+      <ModalImportarCsv
+        catalogo={catalogoFalso}
+        jogosExistentes={[]}
+        aoSalvarJogos={aoSalvarJogos}
+        aoFechar={aoFechar}
+      />,
+    )
+
+    const conteudoCsv = 'Nome;Comprimento;Largura;Espessura\nCatan;295;220;70\nAzul;260;260;70'
+    const arquivo = new File([conteudoCsv], 'meus-jogos.csv', { type: 'text/csv' })
+
+    const inputArquivo = screen.getByLabelText(/Clique para escolher um arquivo CSV/)
+    await usuario.upload(inputArquivo, arquivo)
+
+    // Passo 2: Mapeamento
+    expect(await screen.findByLabelText(/Coluna do Nome do Jogo/)).toBeInTheDocument()
+    expect(screen.getByText(/2 linhas detectadas/)).toBeInTheDocument()
+
+    // Clica em avancar para revisao
+    await usuario.click(screen.getByRole('button', { name: 'Avançar para Revisão' }))
+
+    // Passo 3: Revisão
+    expect(await screen.findByText(/Jogos prontos para salvar:/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Confirmar Importação/ })).toBeInTheDocument()
+
+    // Confirma importação
+    await usuario.click(screen.getByRole('button', { name: /Confirmar Importação/ }))
+
+    // Passo 4: Concluído
+    expect(aoSalvarJogos).toHaveBeenCalledTimes(1)
+    expect(
+      await screen.findByText(/2 jogo\(s\) importado\(s\) com sucesso na coleção!/),
+    ).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Fechar' }))
+    expect(aoFechar).toHaveBeenCalledTimes(1)
+  })
+})
