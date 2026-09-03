@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import type { CatalogoDeJogos } from '../../catalogo/CatalogoDeJogos.js'
+import { CatalogoSemeado } from '../../catalogo/CatalogoSemeado.js'
 import { criarMedidas, type CaixaDeJogo } from '../../nucleo/jogo.js'
 
 /**
@@ -10,9 +12,11 @@ import { criarMedidas, type CaixaDeJogo } from '../../nucleo/jogo.js'
 export function FormularioDeJogo({
   jogosExistentes,
   aoSalvar,
+  catalogo,
 }: {
   jogosExistentes: readonly CaixaDeJogo[]
   aoSalvar: (jogo: CaixaDeJogo) => void
+  catalogo?: CatalogoDeJogos
 }) {
   const [nome, setNome] = useState('')
   const [ladoA, setLadoA] = useState('')
@@ -21,6 +25,9 @@ export function FormularioDeJogo({
   const [destaque, setDestaque] = useState(false)
   const [idJogoBase, setIdJogoBase] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+
+  const catalogoEfetivo = catalogo ?? new CatalogoSemeado()
+  const formatosPadrao = catalogoEfetivo.listarFormatosPadrao()
 
   function aoSubmeter(evento: React.FormEvent): void {
     evento.preventDefault()
@@ -70,6 +77,30 @@ export function FormularioDeJogo({
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
+      </div>
+
+      <div className="campo-grupo">
+        <label htmlFor="jogo-formato-padrao">Formato padrão da caixa (opcional)</label>
+        <select
+          id="jogo-formato-padrao"
+          className="select-estilizado"
+          defaultValue=""
+          onChange={(e) => {
+            const formato = formatosPadrao.find((f) => f.chave === e.target.value)
+            if (formato) {
+              setLadoA(String(formato.maiorMm))
+              setLadoB(String(formato.menorMm))
+              setEspessura(String(formato.espessuraMm))
+            }
+          }}
+        >
+          <option value="">Preenchimento livre ou escolha um formato...</option>
+          {formatosPadrao.map((f) => (
+            <option key={f.chave} value={f.chave}>
+              {f.rotulo}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="campo-linha-tripla">

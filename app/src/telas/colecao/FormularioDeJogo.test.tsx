@@ -77,4 +77,16 @@ describe('FormularioDeJogo', () => {
 
     expect(screen.getByRole('option', { name: 'Catan' })).toBeInTheDocument()
   })
+
+  it('preenche as dimensoes ao selecionar um formato padrao', async () => {
+    const usuario = userEvent.setup()
+    render(<FormularioDeJogo jogosExistentes={[]} aoSalvar={vi.fn()} />)
+
+    const seletor = screen.getByLabelText('Formato padrão da caixa (opcional)')
+    await usuario.selectOptions(seletor, 'quadrada-grande-295')
+
+    expect(screen.getByLabelText('Lado A (mm)')).toHaveValue('295')
+    expect(screen.getByLabelText('Lado B (mm)')).toHaveValue('295')
+    expect(screen.getByLabelText('Espessura (mm)')).toHaveValue('70')
+  })
 })
