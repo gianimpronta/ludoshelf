@@ -11,7 +11,7 @@ import type {
   UnidadeDeComprimento,
 } from './tipos.js'
 
-function interpretarNumero(str: string | undefined): number | null {
+export function interpretarNumero(str: string | undefined): number | null {
   if (str === undefined || str.trim() === '') return null
   const limpo = str.trim().replace(',', '.')
   const num = Number(limpo)
@@ -106,9 +106,17 @@ export async function processarCsv(
     const unidTexto = mapeamento.colunaUnidade
       ? reg.valores[mapeamento.colunaUnidade]?.toLowerCase().trim()
       : undefined
-    let unidade: UnidadeDeComprimento | undefined = opcoes.unidadePadrao
-    if (unidTexto === 'cm' || unidTexto === 'mm' || unidTexto === 'in') {
-      unidade = unidTexto
+    let unidade: UnidadeDeComprimento | undefined =
+      opcoes.unidadePadrao === 'auto' ? undefined : opcoes.unidadePadrao
+
+    if (unidTexto) {
+      if (/^(cm|cent[ií]metros?|cms)$/i.test(unidTexto)) {
+        unidade = 'cm'
+      } else if (/^(mm|mil[ií]metros?|mms)$/i.test(unidTexto)) {
+        unidade = 'mm'
+      } else if (/^(in|pol|polegadas?|inches?|")$/i.test(unidTexto)) {
+        unidade = 'in'
+      }
     }
 
     const nomeBaseRef = mapeamento.colunaJogoBase
@@ -163,9 +171,11 @@ export async function processarCsv(
     if (item.ladoA !== null && item.ladoB !== null && item.espessura !== null) {
       const mA = converterParaMm(item.ladoA, item.unidade)
       const mB = converterParaMm(item.ladoB, item.unidade)
-      maiorMm = Math.max(mA, mB)
-      menorMm = Math.min(mA, mB)
-      espessuraMm = converterParaMm(item.espessura, item.unidade)
+      const mC = converterParaMm(item.espessura, item.unidade)
+      const ordenados = [mA, mB, mC].sort((a, b) => b - a)
+      maiorMm = ordenados[0]!
+      menorMm = ordenados[1]!
+      espessuraMm = ordenados[2]!
       confirmada = item.unidade !== undefined
     } else if (tentarCompletarComCatalogo) {
       const achado = await catalogo.buscarPorNome(item.nome)

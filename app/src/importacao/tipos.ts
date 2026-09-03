@@ -16,7 +16,7 @@ export type PoliticaDuplicatas = 'substituir' | 'ignorar' | 'manter-existente'
 
 export interface OpcoesDeImportacao {
   readonly mapeamento: MapeamentoDeColunas
-  readonly unidadePadrao?: UnidadeDeComprimento | undefined
+  readonly unidadePadrao?: UnidadeDeComprimento | 'auto' | undefined
   readonly politicaDuplicatas: PoliticaDuplicatas
   readonly tentarCompletarComCatalogo: boolean
   readonly nomeDoArquivo?: string | undefined

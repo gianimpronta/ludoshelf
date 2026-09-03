@@ -55,6 +55,43 @@ describe('processarCsv', () => {
     expect(azul.medidas.espessuraMm).toBe(70)
   })
 
+  it('processa planilha de e-commerce com Altura, Largura, Comprimento em cm decimais', async () => {
+    const csvTexto = [
+      'SKU,EAN,Nome,Editora,Categoria,Preço Sugerido,Custo médio,Peso,Altura,Largura,Comprimento,Peso Cúbico ,Peso pra frete,Estoque Atual,Estoque Mínimo,À venda?,Última Compra',
+      'HRM001,3558380117261,Harmonies,Galápagos,Jogo,"R$ 299,99","R$ 224,32","0,94","21,00","21,00","7,00","0,51","0,94",0,0,FALSE,09/05/2025',
+      'BWRING,,Guerra do Anel -- 2ª Edição (jogo de tabuleiro),Devir,Jogo,"R$ 1.149,00","R$ 459,60","3,02","40,70","27,50","9,00","1,68","3,02",0,0,FALSE,07/07/2025',
+    ].join('\n')
+
+    const csv = parsearCsv(csvTexto)
+    const res = await processarCsv(csv, {
+      catalogo: catalogoFalso,
+      opcoes: {
+        mapeamento: {
+          colunaNome: 'Nome',
+          colunaMaiorMm: 'Comprimento',
+          colunaMenorMm: 'Largura',
+          colunaEspessuraMm: 'Altura',
+        },
+        unidadePadrao: 'auto',
+        politicaDuplicatas: 'substituir',
+        tentarCompletarComCatalogo: false,
+      },
+      jogosExistentes: [],
+    })
+
+    expect(res.jogosProntosParaSalvar).toHaveLength(2)
+    const harmonies = res.jogosProntosParaSalvar[0]!
+    expect(harmonies.nome).toBe('Harmonies')
+    expect(harmonies.medidas.maiorMm).toBe(210)
+    expect(harmonies.medidas.menorMm).toBe(210)
+    expect(harmonies.medidas.espessuraMm).toBe(70)
+
+    const guerraDoAnel = res.jogosProntosParaSalvar[1]!
+    expect(guerraDoAnel.medidas.maiorMm).toBe(407)
+    expect(guerraDoAnel.medidas.menorMm).toBe(275)
+    expect(guerraDoAnel.medidas.espessuraMm).toBe(90)
+  })
+
   it('vincula expansao ao jogo-base declarado em outra linha do proprio arquivo', async () => {
     const csv = parsearCsv(
       'Nome;Maior;Menor;Espessura;Base\n' +

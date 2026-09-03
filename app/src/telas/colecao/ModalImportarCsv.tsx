@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { CatalogoDeJogos } from '../../catalogo/CatalogoDeJogos.js'
 import { parsearCsv, type ResultadoParseCsv } from '../../importacao/leitorCsv.js'
-import { processarCsv } from '../../importacao/processarCsv.js'
+import { interpretarNumero, processarCsv } from '../../importacao/processarCsv.js'
 import { gerarTemplateCsv } from '../../importacao/templateCsv.js'
 import type {
   MapeamentoDeColunas,
@@ -51,7 +51,7 @@ export function ModalImportarCsv({
   const [colunaJogoBase, setColunaJogoBase] = useState('')
   const [colunaPartidas, setColunaPartidas] = useState('')
 
-  const [unidadePadrao, setUnidadePadrao] = useState<UnidadeDeComprimento>('mm')
+  const [unidadePadrao, setUnidadePadrao] = useState<UnidadeDeComprimento | 'auto'>('auto')
   const [politicaDuplicatas, setPoliticaDuplicatas] = useState<PoliticaDuplicatas>('substituir')
   const [tentarCatalogo, setTentarCatalogo] = useState(true)
 
@@ -87,17 +87,59 @@ export function ModalImportarCsv({
 
       // Auto-detecção de colunas
       const cabs = parseado.cabecalhos
-      setColunaNome(sugerirColuna(cabs, ['nome', 'jogo', 'title', 'game']) || (cabs[0] ?? ''))
-      setColunaMaiorMm(sugerirColuna(cabs, ['comprimento', 'maior', 'ladoa', 'lado a', 'length']))
-      setColunaMenorMm(
-        sugerirColuna(cabs, ['largura', 'ladob', 'lado b', 'menor', 'width', 'profundidade']),
-      )
-      setColunaEspessuraMm(
-        sugerirColuna(cabs, ['espessura', 'altura', 'height', 'depth', 'thickness']),
-      )
+      const sugNome = sugerirColuna(cabs, ['nome', 'jogo', 'title', 'game']) || (cabs[0] ?? '')
+      const sugMaior = sugerirColuna(cabs, ['comprimento', 'maior', 'ladoa', 'lado a', 'length'])
+      const sugMenor = sugerirColuna(cabs, [
+        'largura',
+        'ladob',
+        'lado b',
+        'menor',
+        'width',
+        'profundidade',
+      ])
+      const sugEsp = sugerirColuna(cabs, ['espessura', 'altura', 'height', 'depth', 'thickness'])
+
+      setColunaNome(sugNome)
+      setColunaMaiorMm(sugMaior)
+      setColunaMenorMm(sugMenor)
+      setColunaEspessuraMm(sugEsp)
       setColunaUnidade(sugerirColuna(cabs, ['unidade', 'unit']))
       setColunaJogoBase(sugerirColuna(cabs, ['base', 'parent', 'jogo-base']))
       setColunaPartidas(sugerirColuna(cabs, ['partida', 'play']))
+
+      // Auto-detecção de unidade baseada nos cabeçalhos e valores numéricos
+      const textoCabecalhos = cabs.join(' ').toLowerCase()
+      let unidadeSugerida: UnidadeDeComprimento | 'auto' = 'auto'
+
+      if (/\b(cm|cent[ií]metros?)\b/i.test(textoCabecalhos)) {
+        unidadeSugerida = 'cm'
+      } else if (/\b(in|polegadas?|inches)\b/i.test(textoCabecalhos)) {
+        unidadeSugerida = 'in'
+      } else {
+        const colunasDimensoes = [sugMaior, sugMenor, sugEsp].filter(Boolean)
+        const valoresAmostra: number[] = []
+
+        for (const linha of parseado.linhas.slice(0, 15)) {
+          for (const col of colunasDimensoes) {
+            if (linha[col]) {
+              const num = interpretarNumero(linha[col])
+              if (num !== null) valoresAmostra.push(num)
+            }
+          }
+        }
+
+        if (valoresAmostra.length > 0) {
+          const maximo = Math.max(...valoresAmostra)
+          // Se o maior valor encontrado for < 100 (ex: 29.5, 21, 7, 40.7), trata-se de centímetros
+          if (maximo < 100) {
+            unidadeSugerida = 'cm'
+          } else {
+            unidadeSugerida = 'mm'
+          }
+        }
+      }
+
+      setUnidadePadrao(unidadeSugerida)
 
       setPasso('mapeamento')
     } catch (excecao) {
@@ -155,7 +197,7 @@ export function ModalImportarCsv({
         catalogo,
         opcoes: {
           mapeamento,
-          unidadePadrao,
+          unidadePadrao: unidadePadrao === 'auto' ? undefined : unidadePadrao,
           politicaDuplicatas,
           tentarCompletarComCatalogo: tentarCatalogo,
           nomeDoArquivo: nomeArquivo,
@@ -393,10 +435,15 @@ export function ModalImportarCsv({
                   id="unidade-padrao"
                   className="select-estilizado"
                   value={unidadePadrao}
-                  onChange={(e) => setUnidadePadrao(e.target.value as UnidadeDeComprimento)}
+                  onChange={(e) =>
+                    setUnidadePadrao(e.target.value as UnidadeDeComprimento | 'auto')
+                  }
                 >
-                  <option value="mm">Milímetros (mm)</option>
+                  <option value="auto">
+                    Detectar automaticamente (&lt; 100 = cm, &ge; 100 = mm)
+                  </option>
                   <option value="cm">Centímetros (cm)</option>
+                  <option value="mm">Milímetros (mm)</option>
                   <option value="in">Polegadas (in)</option>
                 </select>
               </div>

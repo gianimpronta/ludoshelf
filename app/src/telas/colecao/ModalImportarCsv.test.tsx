@@ -101,4 +101,26 @@ describe('ModalImportarCsv', () => {
 
     expect(await screen.findByLabelText(/Coluna do Nome do Jogo/)).toBeInTheDocument()
   })
+
+  it('auto-detecta unidade centimetros quando as dimensoes sao menores que 100', async () => {
+    const usuario = userEvent.setup()
+    render(
+      <ModalImportarCsv
+        catalogo={catalogoFalso}
+        jogosExistentes={[]}
+        aoSalvarJogos={vi.fn()}
+        aoFechar={vi.fn()}
+      />,
+    )
+
+    await usuario.click(screen.getByRole('button', { name: /Colar Texto CSV/ }))
+    const textarea = screen.getByLabelText(/Cole o conteúdo CSV/)
+    await usuario.type(textarea, 'Nome;Altura;Largura;Comprimento\nHarmonies;21,00;21,00;7,00')
+    await usuario.click(screen.getByRole('button', { name: 'Processar Texto' }))
+
+    const selectUnidade = (await screen.findByLabelText(
+      /Unidade padrão das medidas/,
+    )) as HTMLSelectElement
+    expect(selectUnidade.value).toBe('cm')
+  })
 })
