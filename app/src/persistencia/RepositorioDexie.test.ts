@@ -51,10 +51,25 @@ describe('RepositorioDexie', () => {
     expect(jogos[0]?.nome).toBe('Renomeado')
   })
 
+  it('salva multiplos jogos em lote (salvarJogos via bulkPut)', async () => {
+    const repositorio = novoRepositorio()
+    await repositorio.salvarJogos([jogo('a'), jogo('b'), jogo('c')])
+    const jogos = await repositorio.carregarJogos()
+    expect(jogos).toHaveLength(3)
+    expect(jogos.map((j) => j.id).sort()).toEqual(['a', 'b', 'c'])
+  })
+
   it('remove um jogo', async () => {
     const repositorio = novoRepositorio()
     await repositorio.salvarJogo(jogo('a'))
     await repositorio.removerJogo('a')
+    expect(await repositorio.carregarJogos()).toEqual([])
+  })
+
+  it('limpa todos os jogos com limparJogos', async () => {
+    const repositorio = novoRepositorio()
+    await repositorio.salvarJogos([jogo('a'), jogo('b')])
+    await repositorio.limparJogos()
     expect(await repositorio.carregarJogos()).toEqual([])
   })
 

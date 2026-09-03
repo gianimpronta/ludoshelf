@@ -57,6 +57,13 @@ export function FormularioDeEstante({
     }))
   }
 
+  function aoRemoverPrateleira(indice: number): void {
+    setCampos((atual) => ({
+      ...atual,
+      alturasLivresMm: atual.alturasLivresMm.filter((_, i) => i !== indice),
+    }))
+  }
+
   function aoMudarAlturaLivre(indice: number, valor: string): void {
     setCampos((atual) => ({
       ...atual,
@@ -65,63 +72,117 @@ export function FormularioDeEstante({
   }
 
   return (
-    <form onSubmit={aoSubmeter}>
-      {erro !== null && <p role="alert">{erro}</p>}
+    <form onSubmit={aoSubmeter} className="formulario-estilizado">
+      {erro !== null && (
+        <p role="alert" className="mensagem-erro">
+          {erro}
+        </p>
+      )}
 
-      <label htmlFor="campo-nome">Nome</label>
-      <input
-        id="campo-nome"
-        value={campos.nome}
-        onChange={(e) => setCampos({ ...campos, nome: e.target.value })}
-      />
+      <div className="campo-grupo">
+        <label htmlFor="campo-nome">Nome</label>
+        <input
+          id="campo-nome"
+          className="input-texto"
+          placeholder="Ex: Kallax 4x4, Billy da Sala"
+          value={campos.nome}
+          onChange={(e) => setCampos({ ...campos, nome: e.target.value })}
+        />
+      </div>
 
-      <label htmlFor="campo-largura">Largura útil (mm)</label>
-      <input
-        id="campo-largura"
-        value={campos.larguraUtilMm}
-        onChange={(e) => setCampos({ ...campos, larguraUtilMm: e.target.value })}
-      />
-
-      <label htmlFor="campo-profundidade">Profundidade útil (mm)</label>
-      <input
-        id="campo-profundidade"
-        value={campos.profundidadeUtilMm}
-        onChange={(e) => setCampos({ ...campos, profundidadeUtilMm: e.target.value })}
-      />
-
-      <label htmlFor="campo-rodape">Altura do rodapé (mm)</label>
-      <input
-        id="campo-rodape"
-        value={campos.alturaDoRodapeMm}
-        onChange={(e) => setCampos({ ...campos, alturaDoRodapeMm: e.target.value })}
-      />
-
-      <label htmlFor="campo-espessura">Espessura da prateleira (mm)</label>
-      <input
-        id="campo-espessura"
-        value={campos.espessuraDaPrateleiraMm}
-        onChange={(e) => setCampos({ ...campos, espessuraDaPrateleiraMm: e.target.value })}
-      />
-
-      {campos.alturasLivresMm.map((valor, indice) => (
-        <div key={indice}>
-          <label htmlFor={`campo-altura-${indice}`}>
-            Altura livre da prateleira {indice + 1} (mm)
-          </label>
+      <div className="campo-linha-dupla">
+        <div className="campo-grupo">
+          <label htmlFor="campo-largura">Largura útil (mm)</label>
           <input
-            id={`campo-altura-${indice}`}
-            value={valor}
-            onChange={(e) => aoMudarAlturaLivre(indice, e.target.value)}
+            id="campo-largura"
+            className="input-texto"
+            placeholder="Ex: 760"
+            value={campos.larguraUtilMm}
+            onChange={(e) => setCampos({ ...campos, larguraUtilMm: e.target.value })}
           />
         </div>
-      ))}
-      <button type="button" onClick={aoAdicionarPrateleira}>
-        + prateleira
+
+        <div className="campo-grupo">
+          <label htmlFor="campo-profundidade">Profundidade útil (mm)</label>
+          <input
+            id="campo-profundidade"
+            className="input-texto"
+            placeholder="Ex: 280"
+            value={campos.profundidadeUtilMm}
+            onChange={(e) => setCampos({ ...campos, profundidadeUtilMm: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="campo-linha-dupla">
+        <div className="campo-grupo">
+          <label htmlFor="campo-rodape">Altura do rodapé (mm)</label>
+          <input
+            id="campo-rodape"
+            className="input-texto"
+            placeholder="Ex: 80"
+            value={campos.alturaDoRodapeMm}
+            onChange={(e) => setCampos({ ...campos, alturaDoRodapeMm: e.target.value })}
+          />
+        </div>
+
+        <div className="campo-grupo">
+          <label htmlFor="campo-espessura">Espessura da prateleira (mm)</label>
+          <input
+            id="campo-espessura"
+            className="input-texto"
+            placeholder="Ex: 18"
+            value={campos.espessuraDaPrateleiraMm}
+            onChange={(e) => setCampos({ ...campos, espessuraDaPrateleiraMm: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="campo-grupo">
+        <label>Alturas livres das prateleiras</label>
+        {campos.alturasLivresMm.map((valor, indice) => (
+          <div key={indice} style={{ marginTop: '6px' }}>
+            <label htmlFor={`campo-altura-${indice}`} style={{ fontSize: '0.78rem' }}>
+              Altura livre da prateleira {indice + 1} (mm)
+            </label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                id={`campo-altura-${indice}`}
+                className="input-texto"
+                placeholder="Ex: 350"
+                value={valor}
+                onChange={(e) => aoMudarAlturaLivre(indice, e.target.value)}
+              />
+              {campos.alturasLivresMm.length > 1 && (
+                <button
+                  type="button"
+                  className="btn-remover"
+                  style={{ whiteSpace: 'nowrap', padding: '10px 12px' }}
+                  onClick={() => aoRemoverPrateleira(indice)}
+                  aria-label={`Remover prateleira ${indice + 1}`}
+                >
+                  Remover
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <button type="button" className="btn-secundario" onClick={aoAdicionarPrateleira}>
+          + prateleira
+        </button>
+      </div>
+
+      <div className="diagrama-container">
+        <DiagramaDeEstante definicao={definicaoParaDiagrama} />
+        <span className="diagrama-legenda">Corte frontal proporcional ao vivo</span>
+      </div>
+
+      <button type="submit" className="btn-primario">
+        Salvar estante
       </button>
-
-      <DiagramaDeEstante definicao={definicaoParaDiagrama} />
-
-      <button type="submit">Salvar estante</button>
     </form>
   )
 }

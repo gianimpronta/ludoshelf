@@ -42,4 +42,33 @@ describe('TelaDeColecao', () => {
 
     expect(screen.queryByRole('cell', { name: 'Catan' })).not.toBeInTheDocument()
   })
+
+  it('abre o modal de importacao ao clicar no botao Importar CSV', async () => {
+    const usuario = userEvent.setup()
+    render(<TelaDeColecao />)
+
+    await usuario.click(screen.getByRole('button', { name: '📥 Importar CSV' }))
+    expect(screen.getByRole('heading', { name: 'Importar Coleção via CSV' })).toBeInTheDocument()
+  })
+
+  it('limpa toda a colecao com o botao de limpar colecao e confirmacao', async () => {
+    const usuario = userEvent.setup()
+    render(<TelaDeColecao />)
+
+    await usuario.type(screen.getByLabelText('Nome'), 'Catan')
+    await usuario.type(screen.getByLabelText('Lado A (mm)'), '295')
+    await usuario.type(screen.getByLabelText('Lado B (mm)'), '220')
+    await usuario.type(screen.getByLabelText('Espessura (mm)'), '70')
+    await usuario.click(screen.getByRole('button', { name: 'Salvar jogo' }))
+    await screen.findByRole('cell', { name: 'Catan' })
+
+    await usuario.click(screen.getByRole('button', { name: '🗑️ Limpar coleção' }))
+    const btnConfirmar = screen.getByRole('button', { name: /Confirmar limpeza/ })
+    expect(btnConfirmar).toBeInTheDocument()
+
+    await usuario.click(btnConfirmar)
+
+    expect(await screen.findByText('Nenhum jogo cadastrado ainda.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '🗑️ Limpar coleção' })).not.toBeInTheDocument()
+  })
 })

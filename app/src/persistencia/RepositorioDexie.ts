@@ -25,8 +25,16 @@ export class RepositorioDexie implements RepositorioDeColecao {
     await this.banco.jogos.put(jogo)
   }
 
+  async salvarJogos(jogos: readonly CaixaDeJogo[]): Promise<void> {
+    await this.banco.jogos.bulkPut([...jogos])
+  }
+
   async removerJogo(id: IdJogo): Promise<void> {
     await this.banco.jogos.delete(id)
+  }
+
+  async limparJogos(): Promise<void> {
+    await this.banco.jogos.clear()
   }
 
   async carregarEstantes(): Promise<readonly Estante[]> {

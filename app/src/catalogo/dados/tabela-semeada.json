@@ -1,0 +1,102 @@
+{
+  "formatosPadrao": [
+    {
+      "chave": "quadrada-grande-295",
+      "rotulo": "Caixa Quadrada Padrão (295×295×70 mm)",
+      "maiorMm": 295,
+      "menorMm": 295,
+      "espessuraMm": 70,
+      "fonte": "especificacao-padrao-industria"
+    },
+    {
+      "chave": "retangular-media-295x220",
+      "rotulo": "Caixa Retangular Média (295×220×65 mm)",
+      "maiorMm": 295,
+      "menorMm": 220,
+      "espessuraMm": 65,
+      "fonte": "especificacao-padrao-industria"
+    },
+    {
+      "chave": "quadrada-media-200",
+      "rotulo": "Caixa Quadrada Média (200×200×50 mm)",
+      "maiorMm": 200,
+      "menorMm": 200,
+      "espessuraMm": 50,
+      "fonte": "especificacao-padrao-industria"
+    },
+    {
+      "chave": "pequena-160",
+      "rotulo": "Caixa Pequena (160×160×45 mm)",
+      "maiorMm": 160,
+      "menorMm": 160,
+      "espessuraMm": 45,
+      "fonte": "especificacao-padrao-industria"
+    },
+    {
+      "chave": "cartas-compacta-120x95",
+      "rotulo": "Caixa Compacta de Cartas (120×95×30 mm)",
+      "maiorMm": 120,
+      "menorMm": 95,
+      "espessuraMm": 30,
+      "fonte": "especificacao-padrao-industria"
+    }
+  ],
+  "jogosConhecidos": [
+    {
+      "chave": "catan",
+      "nomesConhecidos": ["catan", "os colonizadores de catan", "settlers of catan"],
+      "maiorMm": 295,
+      "menorMm": 240,
+      "espessuraMm": 75,
+      "fonte": "medicao-propria-galapagos"
+    },
+    {
+      "chave": "azul",
+      "nomesConhecidos": ["azul"],
+      "maiorMm": 260,
+      "menorMm": 260,
+      "espessuraMm": 70,
+      "fonte": "medicao-propria-galapagos"
+    },
+    {
+      "chave": "carcassonne",
+      "nomesConhecidos": ["carcassonne"],
+      "maiorMm": 275,
+      "menorMm": 190,
+      "espessuraMm": 65,
+      "fonte": "medicao-propria-devir"
+    },
+    {
+      "chave": "terraforming-mars",
+      "nomesConhecidos": ["terraforming mars"],
+      "maiorMm": 298,
+      "menorMm": 298,
+      "espessuraMm": 71,
+      "fonte": "medicao-propria-meeplebr"
+    },
+    {
+      "chave": "wingspan",
+      "nomesConhecidos": ["wingspan"],
+      "maiorMm": 296,
+      "menorMm": 296,
+      "espessuraMm": 78,
+      "fonte": "medicao-propria-grok"
+    },
+    {
+      "chave": "dixit",
+      "nomesConhecidos": ["dixit"],
+      "maiorMm": 277,
+      "menorMm": 277,
+      "espessuraMm": 55,
+      "fonte": "medicao-propria-galapagos"
+    },
+    {
+      "chave": "ticket-to-ride",
+      "nomesConhecidos": ["ticket to ride", "ticket to ride europa"],
+      "maiorMm": 298,
+      "menorMm": 298,
+      "espessuraMm": 73,
+      "fonte": "medicao-propria-galapagos"
+    }
+  ]
+}

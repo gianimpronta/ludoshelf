@@ -9,16 +9,24 @@ export function PainelDeNaoAlocados({
   nomePorId: ReadonlyMap<string, string>
 }) {
   if (naoAlocados.length === 0) {
-    return <p>Toda a coleção coube na estante.</p>
+    return (
+      <div style={{ marginTop: '16px', color: 'var(--success)' }}>
+        <p>Toda a coleção coube na estante.</p>
+      </div>
+    )
   }
 
   return (
-    <ul>
-      {naoAlocados.map((item) => (
-        <li key={item.idJogo}>
-          {nomePorId.get(item.idJogo) ?? item.idJogo} — {item.motivo} ({item.faltaMm}mm)
-        </li>
-      ))}
-    </ul>
+    <div className="painel-nao-alocados">
+      <h4>Caixas não alocadas ({naoAlocados.length})</h4>
+      <ul className="lista-nao-alocados">
+        {naoAlocados.map((item) => (
+          <li key={item.idJogo}>
+            <strong>{nomePorId.get(item.idJogo) ?? item.idJogo}</strong> — motivo:{' '}
+            <span style={{ color: '#fb7185' }}>{item.motivo}</span> ({item.faltaMm}mm)
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

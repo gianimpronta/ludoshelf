@@ -29,7 +29,14 @@ export function DiagramaDeEstante({ definicao }: { definicao: DefinicaoDeEstante
       width={LARGURA_DO_SVG + 60}
       height={ALTURA_MAX_DO_SVG + 20}
     >
-      <text x={larguraDesenhada / 2} y="12" fontSize="11" textAnchor="middle">
+      <text
+        x={larguraDesenhada / 2}
+        y="12"
+        fontSize="11"
+        fontWeight="600"
+        fill="#f8fafc"
+        textAnchor="middle"
+      >
         {definicao.larguraUtilMm}mm
       </text>
       <rect
@@ -37,8 +44,8 @@ export function DiagramaDeEstante({ definicao }: { definicao: DefinicaoDeEstante
         y="20"
         width={larguraDesenhada}
         height={alturaTotalMm * escala}
-        fill="none"
-        stroke="#333"
+        fill="rgba(99, 102, 241, 0.1)"
+        stroke="#818cf8"
         strokeWidth="2"
       />
       {linhasDePrateleira.map(({ yMm, alturaLivreMm }, indice) => (
@@ -50,7 +57,7 @@ export function DiagramaDeEstante({ definicao }: { definicao: DefinicaoDeEstante
               y1={20 + (alturaTotalMm - yMm) * escala}
               x2={larguraDesenhada}
               y2={20 + (alturaTotalMm - yMm) * escala}
-              stroke="#333"
+              stroke="#a5b4fc"
               strokeWidth="2"
             />
           )}
@@ -58,6 +65,8 @@ export function DiagramaDeEstante({ definicao }: { definicao: DefinicaoDeEstante
             x={larguraDesenhada + 8}
             y={20 + (alturaTotalMm - yMm - alturaLivreMm / 2) * escala}
             fontSize="10"
+            fontWeight="600"
+            fill="#f8fafc"
           >
             {alturaLivreMm}mm
           </text>
@@ -68,7 +77,7 @@ export function DiagramaDeEstante({ definicao }: { definicao: DefinicaoDeEstante
         y={20 + alturaTotalMm * escala - definicao.alturaDoRodapeMm * escala}
         width={larguraDesenhada}
         height={Math.max(definicao.alturaDoRodapeMm * escala, 2)}
-        fill="#c9a84f"
+        fill="#f59e0b"
       />
     </svg>
   )

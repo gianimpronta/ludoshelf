@@ -50,7 +50,9 @@ describe('inicializar', () => {
     const repositorioQuebrado = {
       carregarJogos: () => Promise.reject(new Error('IndexedDB indisponível')),
       salvarJogo: () => Promise.resolve(),
+      salvarJogos: () => Promise.resolve(),
       removerJogo: () => Promise.resolve(),
+      limparJogos: () => Promise.resolve(),
       carregarEstantes: () => Promise.resolve([]),
       salvarEstante: () => Promise.resolve(),
     }
@@ -86,6 +88,30 @@ describe('salvarJogo', () => {
   })
 })
 
+describe('salvarJogos', () => {
+  it('adiciona multiplos jogos ao estado e persiste em lote', async () => {
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+
+    await useEstadoDoApp.getState().salvarJogos([jogo('a'), jogo('b')])
+
+    expect(useEstadoDoApp.getState().jogos).toHaveLength(2)
+    expect(await repositorio.carregarJogos()).toHaveLength(2)
+  })
+
+  it('substitui jogos existentes com mesmo id e mantem os demais', async () => {
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+    await useEstadoDoApp.getState().salvarJogo(jogo('a'))
+
+    await useEstadoDoApp.getState().salvarJogos([{ ...jogo('a'), nome: 'Novo Nome A' }, jogo('b')])
+
+    const jogos = useEstadoDoApp.getState().jogos
+    expect(jogos).toHaveLength(2)
+    expect(jogos.find((j) => j.id === 'a')?.nome).toBe('Novo Nome A')
+  })
+})
+
 describe('removerJogo', () => {
   it('remove do estado e do repositorio', async () => {
     const repositorio = new RepositorioEmMemoria()
@@ -115,6 +141,20 @@ describe('removerJogo', () => {
     expect(jogos[0]?.id).toBe('exp')
     expect(jogos[0]?.idJogoBase).toBeNull()
     expect((await repositorio.carregarJogos())[0]?.idJogoBase).toBeNull()
+  })
+})
+
+describe('limparColecao', () => {
+  it('remove todos os jogos do estado e do repositorio', async () => {
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+    await useEstadoDoApp.getState().salvarJogos([jogo('a'), jogo('b')])
+
+    await useEstadoDoApp.getState().limparColecao()
+
+    expect(useEstadoDoApp.getState().jogos).toEqual([])
+    expect(await repositorio.carregarJogos()).toEqual([])
+    expect(useEstadoDoApp.getState().arranjo).toBeNull()
   })
 })
 
