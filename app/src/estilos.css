@@ -349,6 +349,17 @@ body {
   border-color: rgba(255, 255, 255, 0.45);
 }
 
+.btn-secundario.btn-ativo {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+textarea.input-texto {
+  resize: vertical;
+  min-height: 120px;
+}
+
 .btn-remover {
   background: var(--danger-bg);
   color: #fb7185;

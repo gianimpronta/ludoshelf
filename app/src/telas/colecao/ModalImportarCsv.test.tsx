@@ -65,4 +65,40 @@ describe('ModalImportarCsv', () => {
     await usuario.click(screen.getByRole('button', { name: 'Fechar' }))
     expect(aoFechar).toHaveBeenCalledTimes(1)
   })
+
+  it('permite carregar dados de exemplo com 1 clique para testes no navegador', async () => {
+    const usuario = userEvent.setup()
+    render(
+      <ModalImportarCsv
+        catalogo={catalogoFalso}
+        jogosExistentes={[]}
+        aoSalvarJogos={vi.fn()}
+        aoFechar={vi.fn()}
+      />,
+    )
+
+    await usuario.click(screen.getByRole('button', { name: /Usar dados de exemplo/ }))
+
+    expect(await screen.findByLabelText(/Coluna do Nome do Jogo/)).toBeInTheDocument()
+    expect(screen.getByText(/exemplo-ludoshelf.csv/)).toBeInTheDocument()
+  })
+
+  it('permite colar texto CSV manualmente em uma caixa de texto', async () => {
+    const usuario = userEvent.setup()
+    render(
+      <ModalImportarCsv
+        catalogo={catalogoFalso}
+        jogosExistentes={[]}
+        aoSalvarJogos={vi.fn()}
+        aoFechar={vi.fn()}
+      />,
+    )
+
+    await usuario.click(screen.getByRole('button', { name: /Colar Texto CSV/ }))
+    const textarea = screen.getByLabelText(/Cole o conteúdo CSV/)
+    await usuario.type(textarea, 'Nome;Maior;Menor;Espessura\nCatan;295;220;70')
+    await usuario.click(screen.getByRole('button', { name: 'Processar Texto' }))
+
+    expect(await screen.findByLabelText(/Coluna do Nome do Jogo/)).toBeInTheDocument()
+  })
 })

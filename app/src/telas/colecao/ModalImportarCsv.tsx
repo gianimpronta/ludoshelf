@@ -36,6 +36,8 @@ export function ModalImportarCsv({
   aoFechar: () => void
 }) {
   const [passo, setPasso] = useState<Passo>('upload')
+  const [metodoEntrada, setMetodoEntrada] = useState<'arquivo' | 'texto'>('arquivo')
+  const [textoColado, setTextoColado] = useState('')
   const [nomeArquivo, setNomeArquivo] = useState<string>('')
   const [dadosCsv, setDadosCsv] = useState<ResultadoParseCsv | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -70,21 +72,17 @@ export function ModalImportarCsv({
     URL.revokeObjectURL(url)
   }
 
-  async function aoSelecionarArquivo(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
-    const arquivo = e.target.files?.[0]
-    if (!arquivo) return
-
+  function carregarConteudoCsv(conteudo: string, nomeOrigem: string): void {
     try {
       setErro(null)
-      const conteudo = await arquivo.text()
       const parseado = parsearCsv(conteudo)
 
       if (parseado.cabecalhos.length === 0 || parseado.linhas.length === 0) {
-        setErro('O arquivo CSV parece vazio ou sem cabeçalhos.')
+        setErro('O conteúdo CSV parece vazio ou sem cabeçalhos válidos.')
         return
       }
 
-      setNomeArquivo(arquivo.name)
+      setNomeArquivo(nomeOrigem)
       setDadosCsv(parseado)
 
       // Auto-detecção de colunas
@@ -103,6 +101,33 @@ export function ModalImportarCsv({
     } catch (excecao) {
       setErro(excecao instanceof Error ? excecao.message : String(excecao))
     }
+  }
+
+  async function aoSelecionarArquivo(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const arquivo = e.target.files?.[0]
+    if (!arquivo) return
+    const conteudo = await arquivo.text()
+    carregarConteudoCsv(conteudo, arquivo.name)
+  }
+
+  function aoProcessarTextoColado(): void {
+    if (textoColado.trim() === '') {
+      setErro('Cole o texto do seu CSV antes de continuar.')
+      return
+    }
+    carregarConteudoCsv(textoColado, 'dados-colados.csv')
+  }
+
+  function aoCarregarExemplo(): void {
+    const exemplo = [
+      'Nome;Comprimento;Largura;Espessura;Unidade;Jogo-Base;Partidas',
+      'Catan;295;220;70;mm;;12',
+      'Catan: Cidades & Cavaleiros;295;220;50;mm;Catan;5',
+      'Azul;260;260;70;mm;;8',
+      'Wingspan;296;296;78;mm;;15',
+      'Dixit;277;277;55;mm;;20',
+    ].join('\n')
+    carregarConteudoCsv(exemplo, 'exemplo-ludoshelf.csv')
   }
 
   async function aoAvancarParaRevisao(): Promise<void> {
@@ -171,27 +196,94 @@ export function ModalImportarCsv({
         {passo === 'upload' && (
           <div className="fluxo-upload">
             <p style={{ color: 'var(--text-secondary)' }}>
-              Selecione seu arquivo CSV exportado da Ludopedia, BGG ou de sua planilha pessoal.
+              Importe sua coleção a partir de um arquivo CSV, cole os dados da sua planilha ou teste
+              imediatamente com dados de exemplo.
             </p>
 
-            <div className="zona-upload">
-              <label htmlFor="csv-input-file" className="label-upload">
-                📂 <strong>Clique para escolher um arquivo CSV</strong>
-              </label>
-              <input
-                id="csv-input-file"
-                type="file"
-                accept=".csv,text/csv"
-                onChange={aoSelecionarArquivo}
-                style={{ display: 'none' }}
-              />
-            </div>
-
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
-              <button type="button" className="btn-secundario" onClick={aoBaixarTemplate}>
-                📥 Baixar modelo CSV recomendado
+            <div style={{ display: 'flex', gap: '8px', margin: '16px 0 14px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={`btn-secundario ${metodoEntrada === 'arquivo' ? 'btn-ativo' : ''}`}
+                onClick={() => setMetodoEntrada('arquivo')}
+              >
+                📁 Arquivo CSV
+              </button>
+              <button
+                type="button"
+                className={`btn-secundario ${metodoEntrada === 'texto' ? 'btn-ativo' : ''}`}
+                onClick={() => setMetodoEntrada('texto')}
+              >
+                📋 Colar Texto CSV
+              </button>
+              <button
+                type="button"
+                className="btn-secundario"
+                style={{
+                  marginLeft: 'auto',
+                  background: 'var(--accent-gold-bg)',
+                  color: '#fbbf24',
+                  borderColor: 'rgba(245, 158, 11, 0.35)',
+                }}
+                onClick={aoCarregarExemplo}
+              >
+                ⚡ Usar dados de exemplo
               </button>
             </div>
+
+            {metodoEntrada === 'arquivo' ? (
+              <>
+                <div className="zona-upload">
+                  <label htmlFor="csv-input-file" className="label-upload">
+                    📂 <strong>Clique para escolher um arquivo CSV</strong>
+                  </label>
+                  <input
+                    id="csv-input-file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={aoSelecionarArquivo}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                  <button type="button" className="btn-secundario" onClick={aoBaixarTemplate}>
+                    📥 Baixar modelo CSV recomendado
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="campo-grupo" style={{ marginTop: '12px' }}>
+                <label htmlFor="csv-textarea">
+                  Cole o conteúdo CSV (com cabeçalhos na 1ª linha):
+                </label>
+                <textarea
+                  id="csv-textarea"
+                  className="input-texto"
+                  rows={7}
+                  style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+                  placeholder={
+                    'Nome;Comprimento;Largura;Espessura\nCatan;295;220;70\nAzul;260;260;70'
+                  }
+                  value={textoColado}
+                  onChange={(e) => setTextoColado(e.target.value)}
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '12px',
+                    justifyContent: 'flex-end',
+                    marginTop: '12px',
+                  }}
+                >
+                  <button type="button" className="btn-secundario" onClick={aoBaixarTemplate}>
+                    📥 Baixar modelo CSV
+                  </button>
+                  <button type="button" className="btn-primario" onClick={aoProcessarTextoColado}>
+                    Processar Texto
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
