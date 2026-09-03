@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const DIRETORIO_NUCLEO = fileURLToPath(new URL('../src/nucleo', import.meta.url))
+const DIRETORIO_IMPORTACAO = fileURLToPath(new URL('../src/importacao', import.meta.url))
+const DIRETORIO_CATALOGO = fileURLToPath(new URL('../src/catalogo', import.meta.url))
 
 /**
- * O núcleo é TypeScript puro: nada de UI, 3D, rede ou API de navegador (spec §5.3).
+ * O núcleo, importação e catálogo são TypeScript puro: nada de UI, 3D, rede ou API de navegador (spec §5.3).
  *
  * Isto é um teste e não uma regra de lint porque `typescript-eslint@8.67.0` declara
  * `typescript: ">=4.8.4 <6.1.0"` e não suporta o TypeScript 7 usado aqui. Como teste,
@@ -24,22 +26,41 @@ const PROIBIDOS = [
   { padrao: /\bMath\.random\s*\(/, descricao: 'aleatoriedade não injetada' },
 ]
 
-function listarArquivosDoNucleo(diretorio: string): string[] {
+function listarArquivosTs(diretorio: string): string[] {
   return readdirSync(diretorio, { withFileTypes: true }).flatMap((entrada) => {
     const caminho = join(diretorio, entrada.name)
-    if (entrada.isDirectory()) return listarArquivosDoNucleo(caminho)
-    return entrada.name.endsWith('.ts') ? [caminho] : []
+    if (entrada.isDirectory()) return listarArquivosTs(caminho)
+    return entrada.name.endsWith('.ts') && !entrada.name.endsWith('.test.ts') ? [caminho] : []
   })
 }
 
 describe('fronteira do nucleo', () => {
-  const arquivos = listarArquivosDoNucleo(DIRETORIO_NUCLEO)
+  const arquivos = listarArquivosTs(DIRETORIO_NUCLEO)
 
   it('encontra os arquivos do nucleo', () => {
     expect(arquivos.length).toBeGreaterThan(0)
   })
 
   it.each(arquivos)('%s nao viola a fronteira', (caminho) => {
+    const conteudo = readFileSync(caminho, 'utf8')
+    const violacoes = PROIBIDOS.filter(({ padrao }) => padrao.test(conteudo)).map(
+      ({ descricao }) => descricao,
+    )
+    expect(violacoes).toEqual([])
+  })
+})
+
+describe('fronteira de importacao e catalogo', () => {
+  const arquivos = [
+    ...listarArquivosTs(DIRETORIO_IMPORTACAO),
+    ...listarArquivosTs(DIRETORIO_CATALOGO),
+  ]
+
+  it('encontra os arquivos de importacao e catalogo', () => {
+    expect(arquivos.length).toBeGreaterThan(0)
+  })
+
+  it.each(arquivos)('%s nao viola a fronteira de pureza', (caminho) => {
     const conteudo = readFileSync(caminho, 'utf8')
     const violacoes = PROIBIDOS.filter(({ padrao }) => padrao.test(conteudo)).map(
       ({ descricao }) => descricao,
