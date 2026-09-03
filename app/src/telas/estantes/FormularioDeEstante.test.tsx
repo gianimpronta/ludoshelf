@@ -57,4 +57,21 @@ describe('FormularioDeEstante', () => {
     await usuario.type(screen.getByLabelText('Largura útil (mm)'), '760')
     expect(screen.getByRole('img', { name: /Diagrama da estante/ })).toBeInTheDocument()
   })
+
+  it('remove uma prateleira ao clicar no botao de remover', async () => {
+    const usuario = userEvent.setup()
+    render(<FormularioDeEstante aoSalvar={vi.fn()} />)
+
+    await usuario.click(screen.getByRole('button', { name: '+ prateleira' }))
+    expect(screen.getByLabelText('Altura livre da prateleira 2 (mm)')).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Remover prateleira 2' }))
+
+    expect(screen.queryByLabelText('Altura livre da prateleira 2 (mm)')).not.toBeInTheDocument()
+  })
+
+  it('nao mostra botao de remover quando ha apenas uma prateleira', () => {
+    render(<FormularioDeEstante aoSalvar={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: /Remover prateleira/ })).not.toBeInTheDocument()
+  })
 })

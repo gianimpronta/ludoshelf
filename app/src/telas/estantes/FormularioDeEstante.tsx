@@ -57,6 +57,13 @@ export function FormularioDeEstante({
     }))
   }
 
+  function aoRemoverPrateleira(indice: number): void {
+    setCampos((atual) => ({
+      ...atual,
+      alturasLivresMm: atual.alturasLivresMm.filter((_, i) => i !== indice),
+    }))
+  }
+
   function aoMudarAlturaLivre(indice: number, valor: string): void {
     setCampos((atual) => ({
       ...atual,
@@ -138,13 +145,26 @@ export function FormularioDeEstante({
             <label htmlFor={`campo-altura-${indice}`} style={{ fontSize: '0.78rem' }}>
               Altura livre da prateleira {indice + 1} (mm)
             </label>
-            <input
-              id={`campo-altura-${indice}`}
-              className="input-texto"
-              placeholder="Ex: 350"
-              value={valor}
-              onChange={(e) => aoMudarAlturaLivre(indice, e.target.value)}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                id={`campo-altura-${indice}`}
+                className="input-texto"
+                placeholder="Ex: 350"
+                value={valor}
+                onChange={(e) => aoMudarAlturaLivre(indice, e.target.value)}
+              />
+              {campos.alturasLivresMm.length > 1 && (
+                <button
+                  type="button"
+                  className="btn-remover"
+                  style={{ whiteSpace: 'nowrap', padding: '10px 12px' }}
+                  onClick={() => aoRemoverPrateleira(indice)}
+                  aria-label={`Remover prateleira ${indice + 1}`}
+                >
+                  Remover
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
