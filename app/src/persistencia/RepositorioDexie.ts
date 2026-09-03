@@ -33,6 +33,10 @@ export class RepositorioDexie implements RepositorioDeColecao {
     await this.banco.jogos.delete(id)
   }
 
+  async limparJogos(): Promise<void> {
+    await this.banco.jogos.clear()
+  }
+
   async carregarEstantes(): Promise<readonly Estante[]> {
     return this.banco.estantes.toArray()
   }

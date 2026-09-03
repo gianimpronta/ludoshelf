@@ -13,6 +13,8 @@ export interface RepositorioDeColecao {
   /** Upsert em lote (usado na importação de CSV). */
   salvarJogos(jogos: readonly CaixaDeJogo[]): Promise<void>
   removerJogo(id: IdJogo): Promise<void>
+  /** Remove todos os jogos da coleção. */
+  limparJogos(): Promise<void>
   carregarEstantes(): Promise<readonly Estante[]>
   salvarEstante(estante: Estante): Promise<void>
 }

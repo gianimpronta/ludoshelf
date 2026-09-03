@@ -66,6 +66,13 @@ describe('RepositorioDexie', () => {
     expect(await repositorio.carregarJogos()).toEqual([])
   })
 
+  it('limpa todos os jogos com limparJogos', async () => {
+    const repositorio = novoRepositorio()
+    await repositorio.salvarJogos([jogo('a'), jogo('b')])
+    await repositorio.limparJogos()
+    expect(await repositorio.carregarJogos()).toEqual([])
+  })
+
   it('salva e recarrega uma estante', async () => {
     const repositorio = novoRepositorio()
     await repositorio.salvarEstante(estante())

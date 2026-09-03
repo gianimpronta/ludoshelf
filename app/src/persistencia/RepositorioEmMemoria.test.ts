@@ -60,6 +60,13 @@ describe('RepositorioEmMemoria', () => {
     expect(await repositorio.carregarJogos()).toEqual([])
   })
 
+  it('limpa todos os jogos com limparJogos', async () => {
+    const repositorio = new RepositorioEmMemoria()
+    await repositorio.salvarJogos([jogo('a'), jogo('b')])
+    await repositorio.limparJogos()
+    expect(await repositorio.carregarJogos()).toEqual([])
+  })
+
   it('remover um id inexistente nao lanca', async () => {
     const repositorio = new RepositorioEmMemoria()
     await expect(repositorio.removerJogo('fantasma')).resolves.toBeUndefined()

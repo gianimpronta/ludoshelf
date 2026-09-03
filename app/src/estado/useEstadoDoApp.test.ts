@@ -52,6 +52,7 @@ describe('inicializar', () => {
       salvarJogo: () => Promise.resolve(),
       salvarJogos: () => Promise.resolve(),
       removerJogo: () => Promise.resolve(),
+      limparJogos: () => Promise.resolve(),
       carregarEstantes: () => Promise.resolve([]),
       salvarEstante: () => Promise.resolve(),
     }
@@ -140,6 +141,20 @@ describe('removerJogo', () => {
     expect(jogos[0]?.id).toBe('exp')
     expect(jogos[0]?.idJogoBase).toBeNull()
     expect((await repositorio.carregarJogos())[0]?.idJogoBase).toBeNull()
+  })
+})
+
+describe('limparColecao', () => {
+  it('remove todos os jogos do estado e do repositorio', async () => {
+    const repositorio = new RepositorioEmMemoria()
+    await useEstadoDoApp.getState().inicializar(repositorio)
+    await useEstadoDoApp.getState().salvarJogos([jogo('a'), jogo('b')])
+
+    await useEstadoDoApp.getState().limparColecao()
+
+    expect(useEstadoDoApp.getState().jogos).toEqual([])
+    expect(await repositorio.carregarJogos()).toEqual([])
+    expect(useEstadoDoApp.getState().arranjo).toBeNull()
   })
 })
 

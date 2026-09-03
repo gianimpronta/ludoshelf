@@ -30,6 +30,10 @@ export class RepositorioEmMemoria implements RepositorioDeColecao {
     this.jogos.delete(id)
   }
 
+  async limparJogos(): Promise<void> {
+    this.jogos.clear()
+  }
+
   async carregarEstantes(): Promise<readonly Estante[]> {
     return [...this.estantes.values()]
   }

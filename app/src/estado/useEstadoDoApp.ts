@@ -30,6 +30,7 @@ export interface EstadoDoApp {
   salvarJogo(jogo: CaixaDeJogo): Promise<void>
   salvarJogos(jogos: readonly CaixaDeJogo[]): Promise<void>
   removerJogo(id: IdJogo): Promise<void>
+  limparColecao(): Promise<void>
   salvarEstante(estante: Estante): Promise<void>
   selecionarEstante(id: string): void
   recalcularArranjo(): void
@@ -113,6 +114,12 @@ export const useEstadoDoApp = create<EstadoDoApp>((set, get) => ({
       dependentes.map((jogo) => repositorio.salvarJogo({ ...jogo, idJogoBase: null })),
     )
     await repositorio.removerJogo(id)
+  },
+
+  async limparColecao() {
+    const { repositorio, geracao } = get()
+    set({ jogos: [], arranjo: null, calculando: false, geracao: geracao + 1 })
+    await repositorio.limparJogos()
   },
 
   async salvarEstante(estante) {
