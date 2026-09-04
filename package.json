@@ -6,16 +6,34 @@
     "node": ">=24"
   },
   "scripts": {
+    "dev:app": "pnpm --filter app dev",
+    "dev:servidor": "pnpm --filter servidor dev",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p app/tsconfig.json",
+    "typecheck": "tsc --noEmit -p app/tsconfig.json && tsc --noEmit -p servidor/tsconfig.json",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:dev": "prisma migrate dev",
+    "db:seed": "node --env-file=.env --import tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "node --env-file=.env --import tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "@prisma/client": "7.8.0",
     "@types/node": "^26.2.0",
+    "@types/pg": "8.15.6",
+    "dotenv": "^17.4.2",
     "prettier": "^3.9.6",
+    "prisma": "7.8.0",
+    "tsx": "^4.19.3",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.8.0",
+    "pg": "8.22.0"
   }
 }
