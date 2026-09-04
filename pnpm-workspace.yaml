@@ -1,4 +1,9 @@
 packages:
   - app
+  - servidor
+allowBuilds:
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
 minimumReleaseAgeExclude:
   - '@testing-library/user-event@14.6.5'

@@ -17,6 +17,15 @@ export class CatalogoFalso implements CatalogoDeJogos {
     return this.dados.get(normalizarNome(nome)) ?? null
   }
 
+  async buscar(criterios: {
+    readonly nome?: string | undefined
+  }): Promise<ResultadoBuscaCatalogo | null> {
+    if (criterios.nome) {
+      return this.buscarPorNome(criterios.nome)
+    }
+    return null
+  }
+
   listarFormatosPadrao(): readonly FormatoPadrao[] {
     return this.formatos
   }

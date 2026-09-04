@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model JogoCatalogo {
+  id            String           @id @default(uuid()) @db.Uuid
+  idBgg         Int?             @unique @map("id_bgg")
+  idLudopedia   Int?             @unique @map("id_ludopedia")
+  ean           String?          @db.VarChar(20)
+  nome          String           @db.VarChar(255)
+  slug          String?          @unique @db.VarChar(255)
+  anoLancamento Int?             @map("ano_lancamento")
+  criadoEm      DateTime         @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm  DateTime         @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+  versoes       VersaoCatalogo[]
+
+  @@map("jogos_catalogo")
+}
+
+model VersaoCatalogo {
+  id           String       @id @default(uuid()) @db.Uuid
+  jogoId       String       @map("jogo_id") @db.Uuid
+  idBggVersao  Int?         @map("id_bgg_versao")
+  nomeVersao   String       @map("nome_versao") @db.VarChar(255)
+  editora      String?      @db.VarChar(150)
+  idioma       String?      @db.VarChar(50)
+  ano          Int?
+  maiorMm      Int          @map("maior_mm")
+  menorMm      Int          @map("menor_mm")
+  espessuraMm  Int          @map("espessura_mm")
+  confirmada   Boolean      @default(false)
+  fonte        String       @default("bgg") @db.VarChar(50)
+  criadoEm     DateTime     @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm DateTime     @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+  jogo         JogoCatalogo @relation(fields: [jogoId], references: [id], onDelete: Cascade)
+
+  @@unique([jogoId, idBggVersao])
+  @@index([jogoId])
+  @@map("versoes_catalogo")
+}

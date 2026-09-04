@@ -56,6 +56,8 @@ export async function processarCsv(
     readonly espessura: number | null
     readonly unidade?: UnidadeDeComprimento | undefined
     readonly partidas: number | null
+    readonly idBgg: number | null
+    readonly idLudopedia: number | null
   }
 
   const intermediarios: ItemIntermediario[] = []
@@ -125,6 +127,12 @@ export async function processarCsv(
     const partidasNum = mapeamento.colunaPartidas
       ? interpretarNumero(reg.valores[mapeamento.colunaPartidas])
       : null
+    const idBgg = mapeamento.colunaIdBgg
+      ? interpretarNumero(reg.valores[mapeamento.colunaIdBgg])
+      : null
+    const idLudopedia = mapeamento.colunaIdLudopedia
+      ? interpretarNumero(reg.valores[mapeamento.colunaIdLudopedia])
+      : null
 
     intermediarios.push({
       linhaNum: reg.numeroDaLinha,
@@ -136,6 +144,8 @@ export async function processarCsv(
       espessura: esp,
       unidade,
       partidas: partidasNum,
+      idBgg: idBgg !== null ? Math.round(idBgg) : null,
+      idLudopedia: idLudopedia !== null ? Math.round(idLudopedia) : null,
     })
   }
 
@@ -178,12 +188,21 @@ export async function processarCsv(
       espessuraMm = ordenados[2]!
       confirmada = item.unidade !== undefined
     } else if (tentarCompletarComCatalogo) {
-      const achado = await catalogo.buscarPorNome(item.nome)
+      const achado = catalogo.buscar
+        ? await catalogo.buscar({
+            nome: item.nome,
+            idBgg: item.idBgg !== null ? item.idBgg : undefined,
+            idLudopedia: item.idLudopedia !== null ? item.idLudopedia : undefined,
+          })
+        : await catalogo.buscarPorNome(item.nome)
+
       if (achado !== null) {
         maiorMm = achado.maiorMm
         menorMm = achado.menorMm
         espessuraMm = achado.espessuraMm
-        origemMedida = { tipo: 'semeada', chaveDoTemplate: achado.chaveDoTemplate }
+        origemMedida = achado.chaveDoTemplate
+          ? { tipo: 'semeada', chaveDoTemplate: achado.chaveDoTemplate }
+          : { tipo: 'manual' }
         confirmada = false
       }
     }
@@ -214,8 +233,8 @@ export async function processarCsv(
         medidas,
         idJogoBase,
         frequencia,
-        idLudopedia: null,
-        idBgg: null,
+        idLudopedia: item.idLudopedia,
+        idBgg: item.idBgg,
       })
     } catch (e) {
       erros.push({

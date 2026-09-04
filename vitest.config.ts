@@ -5,6 +5,6 @@ import { defineConfig } from 'vitest/config'
 // com `environmentMatchGlobs` não funcionou.
 export default defineConfig({
   test: {
-    projects: ['app/vite.config.ts', 'app/vitest.nucleo.config.ts'],
+    projects: ['app/vite.config.ts', 'app/vitest.nucleo.config.ts', 'servidor/vitest.config.ts'],
   },
 })

@@ -40,6 +40,15 @@ export class CatalogoSemeado implements CatalogoDeJogos {
     }
   }
 
+  async buscar(criterios: {
+    readonly nome?: string | undefined
+  }): Promise<ResultadoBuscaCatalogo | null> {
+    if (criterios.nome) {
+      return this.buscarPorNome(criterios.nome)
+    }
+    return null
+  }
+
   listarFormatosPadrao(): readonly FormatoPadrao[] {
     return dadosSemeadura.formatosPadrao as readonly FormatoPadrao[]
   }

@@ -10,6 +10,8 @@ export interface MapeamentoDeColunas {
   readonly colunaUnidade?: string | undefined
   readonly colunaJogoBase?: string | undefined
   readonly colunaPartidas?: string | undefined
+  readonly colunaIdBgg?: string | undefined
+  readonly colunaIdLudopedia?: string | undefined
 }
 
 export type PoliticaDuplicatas = 'substituir' | 'ignorar' | 'manter-existente'

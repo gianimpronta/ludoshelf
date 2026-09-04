@@ -50,21 +50,33 @@ describe('fronteira do nucleo', () => {
   })
 })
 
-describe('fronteira de importacao e catalogo', () => {
-  const arquivos = [
+describe('fronteira de importacao e catalogo puro', () => {
+  // CatalogoHttp é o adaptador HTTP que fala com o proxy/servidor (spec §5.3).
+  // Os demais arquivos de importação e catálogo devem ser TypeScript puro sem I/O.
+  const arquivosPuros = [
     ...listarArquivosTs(DIRETORIO_IMPORTACAO),
-    ...listarArquivosTs(DIRETORIO_CATALOGO),
+    ...listarArquivosTs(DIRETORIO_CATALOGO).filter((c) => !c.endsWith('CatalogoHttp.ts')),
   ]
 
-  it('encontra os arquivos de importacao e catalogo', () => {
-    expect(arquivos.length).toBeGreaterThan(0)
+  it('encontra os arquivos de importacao e catalogo puro', () => {
+    expect(arquivosPuros.length).toBeGreaterThan(0)
   })
 
-  it.each(arquivos)('%s nao viola a fronteira de pureza', (caminho) => {
+  it.each(arquivosPuros)('%s nao viola a fronteira de pureza', (caminho) => {
     const conteudo = readFileSync(caminho, 'utf8')
     const violacoes = PROIBIDOS.filter(({ padrao }) => padrao.test(conteudo)).map(
       ({ descricao }) => descricao,
     )
+    expect(violacoes).toEqual([])
+  })
+
+  it('CatalogoHttp nao viola fronteiras de UI, 3D ou persistencia', () => {
+    const caminhoHttp = join(DIRETORIO_CATALOGO, 'CatalogoHttp.ts')
+    const conteudo = readFileSync(caminhoHttp, 'utf8')
+    const proibidosParaHttp = PROIBIDOS.filter(({ descricao }) => descricao !== 'chamada de fetch')
+    const violacoes = proibidosParaHttp
+      .filter(({ padrao }) => padrao.test(conteudo))
+      .map(({ descricao }) => descricao)
     expect(violacoes).toEqual([])
   })
 })

@@ -50,6 +50,8 @@ export function ModalImportarCsv({
   const [colunaUnidade, setColunaUnidade] = useState('')
   const [colunaJogoBase, setColunaJogoBase] = useState('')
   const [colunaPartidas, setColunaPartidas] = useState('')
+  const [colunaIdBgg, setColunaIdBgg] = useState('')
+  const [colunaIdLudopedia, setColunaIdLudopedia] = useState('')
 
   const [unidadePadrao, setUnidadePadrao] = useState<UnidadeDeComprimento | 'auto'>('auto')
   const [politicaDuplicatas, setPoliticaDuplicatas] = useState<PoliticaDuplicatas>('substituir')
@@ -106,6 +108,10 @@ export function ModalImportarCsv({
       setColunaUnidade(sugerirColuna(cabs, ['unidade', 'unit']))
       setColunaJogoBase(sugerirColuna(cabs, ['base', 'parent', 'jogo-base']))
       setColunaPartidas(sugerirColuna(cabs, ['partida', 'play']))
+      setColunaIdBgg(sugerirColuna(cabs, ['id_bgg', 'bgg_id', 'id bgg', 'bgg']))
+      setColunaIdLudopedia(
+        sugerirColuna(cabs, ['id_ludopedia', 'ludopedia_id', 'id ludopedia', 'ludopedia']),
+      )
 
       // Auto-detecção de unidade baseada nos cabeçalhos e valores numéricos
       const textoCabecalhos = cabs.join(' ').toLowerCase()
@@ -191,6 +197,8 @@ export function ModalImportarCsv({
         colunaUnidade: colunaUnidade || undefined,
         colunaJogoBase: colunaJogoBase || undefined,
         colunaPartidas: colunaPartidas || undefined,
+        colunaIdBgg: colunaIdBgg || undefined,
+        colunaIdLudopedia: colunaIdLudopedia || undefined,
       }
 
       const processado = await processarCsv(dadosCsv, {
@@ -487,6 +495,42 @@ export function ModalImportarCsv({
 
             <div className="campo-linha-dupla">
               <div className="campo-grupo">
+                <label htmlFor="map-bgg">Coluna ID BGG (opcional)</label>
+                <select
+                  id="map-bgg"
+                  className="select-estilizado"
+                  value={colunaIdBgg}
+                  onChange={(e) => setColunaIdBgg(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo-grupo">
+                <label htmlFor="map-ludopedia">Coluna ID Ludopedia (opcional)</label>
+                <select
+                  id="map-ludopedia"
+                  className="select-estilizado"
+                  value={colunaIdLudopedia}
+                  onChange={(e) => setColunaIdLudopedia(e.target.value)}
+                >
+                  <option value="">(Nenhuma)</option>
+                  {dadosCsv.cabecalhos.map((cab) => (
+                    <option key={cab} value={cab}>
+                      {cab}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="campo-linha-dupla">
+              <div className="campo-grupo">
                 <label htmlFor="politica-duplicatas">Se o jogo já existir na coleção</label>
                 <select
                   id="politica-duplicatas"
@@ -506,7 +550,7 @@ export function ModalImportarCsv({
                     checked={tentarCatalogo}
                     onChange={(e) => setTentarCatalogo(e.target.checked)}
                   />
-                  <span>Completar medidas faltantes com catálogo semeado</span>
+                  <span>Buscar medidas no catálogo/BGG nesta importação</span>
                 </label>
               </div>
             </div>
