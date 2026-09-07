@@ -228,4 +228,28 @@ describe('processarCsv', () => {
     expect(res.jogosProntosParaSalvar).toHaveLength(1)
     expect(res.jogosProntosParaSalvar[0]?.nome).toBe('Azul')
   })
+
+  it('chama o callback aoProgredir informando o progresso da consulta de medidas pendentes', async () => {
+    const progresso: { atual: number; total: number }[] = []
+    const csv = parsearCsv('Nome\nCatan\nAzul\nDixit')
+
+    await processarCsv(csv, {
+      catalogo: catalogoFalso,
+      opcoes: {
+        mapeamento: { colunaNome: 'Nome' },
+        politicaDuplicatas: 'substituir',
+        tentarCompletarComCatalogo: true,
+        aoProgredir: (atual, total) => {
+          progresso.push({ atual, total })
+        },
+      },
+      jogosExistentes: [],
+    })
+
+    expect(progresso).toEqual([
+      { atual: 1, total: 3 },
+      { atual: 2, total: 3 },
+      { atual: 3, total: 3 },
+    ])
+  })
 })

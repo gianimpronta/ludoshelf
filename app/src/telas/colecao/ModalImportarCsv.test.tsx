@@ -123,4 +123,47 @@ describe('ModalImportarCsv', () => {
     )) as HTMLSelectElement
     expect(selectUnidade.value).toBe('cm')
   })
+
+  it('exibe indicador de progresso ao avancar para revisao quando consulta o catalogo', async () => {
+    const usuario = userEvent.setup()
+    let resolveBusca: (() => void) | null = null
+    const catalogoComEspera = {
+      ...catalogoFalso,
+      buscar: vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveBusca = () => resolve(null)
+        })
+      }),
+    }
+
+    render(
+      <ModalImportarCsv
+        catalogo={catalogoComEspera as any}
+        jogosExistentes={[]}
+        aoSalvarJogos={vi.fn()}
+        aoFechar={vi.fn()}
+      />,
+    )
+
+    await usuario.click(screen.getByRole('button', { name: /Colar Texto CSV/ }))
+    const textarea = screen.getByLabelText(/Cole o conteúdo CSV/)
+    await usuario.type(textarea, 'Nome\nJogoSemMedida')
+    await usuario.click(screen.getByRole('button', { name: 'Processar Texto' }))
+
+    expect(await screen.findByLabelText(/Coluna do Nome do Jogo/)).toBeInTheDocument()
+
+    // Clica em avancar para revisao
+    await usuario.click(screen.getByRole('button', { name: 'Avançar para Revisão' }))
+
+    // Durante o processamento, deve exibir feedback de progresso / processamento
+    expect(screen.getByText(/Processando/i)).toBeInTheDocument()
+
+    // Resolve a busca pendente
+    if (typeof resolveBusca === 'function') {
+      ;(resolveBusca as () => void)()
+    }
+
+    // Apos resolver, chega no passo de revisao
+    expect(await screen.findByText(/Jogos prontos para salvar:/)).toBeInTheDocument()
+  })
 })

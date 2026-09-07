@@ -25,7 +25,8 @@ export function ModalEnriquecerPendencias({
   aoFechar: () => void
 }) {
   const [itens, setItens] = useState<ResolucaoJogo[]>([])
-  const [carregandoLote, setCarregandoLote] = useState(false)
+  const [consultando, setConsultando] = useState(false)
+  const [progresso, setProgresso] = useState<{ atual: number; total: number } | null>(null)
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
@@ -40,46 +41,20 @@ export function ModalEnriquecerPendencias({
       buscando: false,
     }))
     setItens(estadoInicial)
-    executarBuscaInicial(estadoInicial)
+    setProgresso(null)
   }, [jogosPendentes])
 
-  async function executarBuscaInicial(lista: ResolucaoJogo[]): Promise<void> {
-    setCarregandoLote(true)
+  async function iniciarConsulta(): Promise<void> {
+    if (itens.length === 0 || consultando) return
+    setConsultando(true)
+
     try {
-      if ('resolverLote' in catalogo && typeof (catalogo as any).resolverLote === 'function') {
-        const payload = lista.map((item, idx) => ({
-          linha: idx,
-          nome: item.jogoOriginal.nome,
-          idBgg: item.jogoOriginal.idBgg ?? undefined,
-          idLudopedia: item.jogoOriginal.idLudopedia ?? undefined,
-        }))
+      for (let i = 0; i < itens.length; i++) {
+        setProgresso({ atual: i + 1, total: itens.length })
+        setItens((atuais) => atuais.map((it, idx) => (idx === i ? { ...it, buscando: true } : it)))
 
-        const respostas = await (catalogo as any).resolverLote(payload)
-        setItens((atuais) =>
-          atuais.map((item, idx) => {
-            const resp = respostas.find((r: any) => r.linha === idx)?.resultado
-            if (!resp) return item
-
-            const versoes = resp.versoes ?? []
-            const primeiraVersao = versoes[0]
-            if (primeiraVersao) {
-              return {
-                ...item,
-                versoes,
-                versaoSelecionadaId: primeiraVersao.id,
-                ladoA: String(primeiraVersao.maiorMm),
-                ladoB: String(primeiraVersao.menorMm),
-                espessura: String(primeiraVersao.espessuraMm),
-                confirmado: versoes.length === 1, // Se só tem 1 versão, já pré-confirma
-              }
-            }
-            return item
-          }),
-        )
-      } else {
-        // Fallback: busca um a um
-        for (let i = 0; i < lista.length; i++) {
-          const item = lista[i]!
+        const item = itens[i]!
+        try {
           const achado = catalogo.buscar
             ? await catalogo.buscar({
                 nome: item.jogoOriginal.nome,
@@ -89,27 +64,39 @@ export function ModalEnriquecerPendencias({
             : await catalogo.buscarPorNome(item.jogoOriginal.nome)
 
           if (achado) {
+            const versoes = achado.versoes ?? []
+            const primeiraVersao = versoes[0]
             setItens((atuais) =>
-              atuais.map((it, idx) =>
-                idx === i
-                  ? {
-                      ...it,
-                      versoes: achado.versoes ?? [],
-                      ladoA: String(achado.maiorMm),
-                      ladoB: String(achado.menorMm),
-                      espessura: String(achado.espessuraMm),
-                      confirmado: (achado.versoes ?? []).length <= 1,
-                    }
-                  : it,
-              ),
+              atuais.map((it, idx) => {
+                if (idx !== i) return it
+                if (primeiraVersao) {
+                  return {
+                    ...it,
+                    versoes,
+                    versaoSelecionadaId: primeiraVersao.id,
+                    ladoA: String(primeiraVersao.maiorMm),
+                    ladoB: String(primeiraVersao.menorMm),
+                    espessura: String(primeiraVersao.espessuraMm),
+                    confirmado: versoes.length === 1,
+                    buscando: false,
+                  }
+                }
+                return { ...it, buscando: false }
+              }),
+            )
+          } else {
+            setItens((atuais) =>
+              atuais.map((it, idx) => (idx === i ? { ...it, buscando: false } : it)),
             )
           }
+        } catch {
+          setItens((atuais) =>
+            atuais.map((it, idx) => (idx === i ? { ...it, buscando: false } : it)),
+          )
         }
       }
-    } catch {
-      // Falha silenciosa na carga inicial em lote
     } finally {
-      setCarregandoLote(false)
+      setConsultando(false)
     }
   }
 
@@ -178,11 +165,37 @@ export function ModalEnriquecerPendencias({
             provisórias. Selecione a versão correta da caixa física que você possui:
           </p>
 
-          {carregandoLote && (
-            <p style={{ color: 'var(--accent)', fontStyle: 'italic', marginBottom: '12px' }}>
-              🔍 Consultando banco PostgreSQL e BGG em lote...
-            </p>
-          )}
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px 16px',
+              background: 'var(--surface-sunken)',
+              border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                {progresso
+                  ? `Consultando no catálogo/BGG: ${progresso.atual} de ${progresso.total} jogos (${Math.round((progresso.atual / progresso.total) * 100)}%)...`
+                  : 'Busque edições e medidas físicas oficiais no catálogo central e BGG.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-secundario"
+              disabled={consultando || itens.length === 0}
+              onClick={iniciarConsulta}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {consultando ? '⏳ Consultando BGG...' : '🔍 Consultar Versões no BGG'}
+            </button>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {itens.map((item, idx) => (
@@ -216,7 +229,11 @@ export function ModalEnriquecerPendencias({
                       </span>
                     )}
                   </div>
-                  {item.confirmado ? (
+                  {item.buscando ? (
+                    <span style={{ color: 'var(--accent, #6366f1)', fontSize: '0.85rem' }}>
+                      ⏳ Consultando BGG...
+                    </span>
+                  ) : item.confirmado ? (
                     <span
                       style={{
                         color: 'var(--success, #4ade80)',

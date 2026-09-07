@@ -22,6 +22,7 @@ export interface OpcoesDeImportacao {
   readonly politicaDuplicatas: PoliticaDuplicatas
   readonly tentarCompletarComCatalogo: boolean
   readonly nomeDoArquivo?: string | undefined
+  readonly aoProgredir?: (atual: number, total: number) => void
 }
 
 export interface ItemDePendencia {
