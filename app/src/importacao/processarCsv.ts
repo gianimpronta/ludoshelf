@@ -150,6 +150,11 @@ export async function processarCsv(
   }
 
   // Segundo passo: resolução de parentesco e medidas
+  const itensParaConsultar = tentarCompletarComCatalogo
+    ? intermediarios.filter((it) => it.ladoA === null || it.ladoB === null || it.espessura === null)
+    : []
+  let progressoAtual = 0
+
   for (const item of intermediarios) {
     let idJogoBase: string | null = null
     if (item.nomeBaseRef !== null) {
@@ -188,6 +193,8 @@ export async function processarCsv(
       espessuraMm = ordenados[2]!
       confirmada = item.unidade !== undefined
     } else if (tentarCompletarComCatalogo) {
+      progressoAtual++
+      opcoes.aoProgredir?.(progressoAtual, itensParaConsultar.length)
       const achado = catalogo.buscar
         ? await catalogo.buscar({
             nome: item.nome,

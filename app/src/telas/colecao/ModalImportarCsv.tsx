@@ -60,6 +60,11 @@ export function ModalImportarCsv({
   const [resultadoProcessamento, setResultadoProcessamento] =
     useState<ResultadoProcessamentoCsv | null>(null)
   const [salvando, setSalvando] = useState(false)
+  const [processando, setProcessando] = useState(false)
+  const [progressoConsulta, setProgressoConsulta] = useState<{
+    atual: number
+    total: number
+  } | null>(null)
 
   function aoBaixarTemplate(): void {
     const csv = gerarTemplateCsv()
@@ -189,6 +194,8 @@ export function ModalImportarCsv({
 
     try {
       setErro(null)
+      setProcessando(true)
+      setProgressoConsulta(null)
       const mapeamento: MapeamentoDeColunas = {
         colunaNome,
         colunaMaiorMm: colunaMaiorMm || undefined,
@@ -209,6 +216,9 @@ export function ModalImportarCsv({
           politicaDuplicatas,
           tentarCompletarComCatalogo: tentarCatalogo,
           nomeDoArquivo: nomeArquivo,
+          aoProgredir: (atual, total) => {
+            setProgressoConsulta({ atual, total })
+          },
         },
         jogosExistentes,
       })
@@ -217,6 +227,9 @@ export function ModalImportarCsv({
       setPasso('revisao')
     } catch (excecao) {
       setErro(excecao instanceof Error ? excecao.message : String(excecao))
+    } finally {
+      setProcessando(false)
+      setProgressoConsulta(null)
     }
   }
 
@@ -555,6 +568,24 @@ export function ModalImportarCsv({
               </div>
             </div>
 
+            {processando && (
+              <div
+                style={{
+                  margin: '16px 0 0',
+                  padding: '12px',
+                  background: 'var(--surface-sunken)',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ color: 'var(--accent, #6366f1)', margin: 0, fontStyle: 'italic' }}>
+                  {progressoConsulta && progressoConsulta.total > 0
+                    ? `🔍 Consultando medidas no catálogo/BGG: ${progressoConsulta.atual} de ${progressoConsulta.total}...`
+                    : '🔍 Processando linhas e consultando catálogo...'}
+                </p>
+              </div>
+            )}
+
             <div
               style={{
                 display: 'flex',
@@ -563,11 +594,21 @@ export function ModalImportarCsv({
                 marginTop: '16px',
               }}
             >
-              <button type="button" className="btn-secundario" onClick={() => setPasso('upload')}>
+              <button
+                type="button"
+                className="btn-secundario"
+                disabled={processando}
+                onClick={() => setPasso('upload')}
+              >
                 Voltar
               </button>
-              <button type="button" className="btn-primario" onClick={aoAvancarParaRevisao}>
-                Avançar para Revisão
+              <button
+                type="button"
+                className="btn-primario"
+                disabled={processando}
+                onClick={aoAvancarParaRevisao}
+              >
+                {processando ? 'Processando...' : 'Avançar para Revisão'}
               </button>
             </div>
           </div>
