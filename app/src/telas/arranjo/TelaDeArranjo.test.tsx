@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { RepositorioEmMemoria } from '../../persistencia/RepositorioEmMemoria.js'
@@ -16,6 +16,7 @@ describe('TelaDeArranjo', () => {
   it('mostra estado vazio quando nao ha arranjo calculado', () => {
     render(<TelaDeArranjo />)
     expect(screen.getByText('Nenhum arranjo calculado ainda.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Exportar PNG/i })).toBeDisabled()
   })
 
   it('calcula ao clicar em Recalcular e mostra a cena', async () => {
@@ -60,5 +61,78 @@ describe('TelaDeArranjo', () => {
     useEstadoDoApp.setState({ calculando: true, arranjo: null })
     render(<TelaDeArranjo />)
     expect(screen.getByRole('status')).toHaveTextContent('Calculando…')
+  })
+
+  it('abre o menu de exportação e exibe opções 1x e 2x', async () => {
+    const usuario = userEvent.setup()
+    await useEstadoDoApp.getState().salvarEstante(
+      montarEstante('e1', {
+        nome: 'Billy',
+        larguraUtilMm: 760,
+        profundidadeUtilMm: 280,
+        alturaDoRodapeMm: 80,
+        espessuraDaPrateleiraMm: 18,
+        alturasLivresMm: [350],
+      }),
+    )
+    await useEstadoDoApp.getState().salvarJogo({
+      id: 'a',
+      nome: 'Catan',
+      medidas: criarMedidas(295, 220, 70, { tipo: 'manual' }, true),
+      idJogoBase: null,
+      frequencia: { tipo: 'desconhecida' },
+      idLudopedia: null,
+      idBgg: null,
+    })
+
+    render(<TelaDeArranjo />)
+    await usuario.click(screen.getByRole('button', { name: 'Recalcular arranjo' }))
+    expect(await screen.findByText(/Toda a coleção coube/)).toBeInTheDocument()
+
+    const botaoExportar = screen.getByRole('button', { name: /Exportar PNG/i })
+    expect(botaoExportar).not.toBeDisabled()
+
+    await usuario.click(botaoExportar)
+    expect(screen.getByRole('menuitem', { name: /Padrão \(1x\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Alta definição \(2x\)/i })).toBeInTheDocument()
+  })
+
+  it('permite selecionar um jogo na lista, abrindo a inspeção com toggle e dismiss', async () => {
+    const usuario = userEvent.setup()
+    await useEstadoDoApp.getState().salvarEstante(
+      montarEstante('e1', {
+        nome: 'Billy',
+        larguraUtilMm: 760,
+        profundidadeUtilMm: 280,
+        alturaDoRodapeMm: 80,
+        espessuraDaPrateleiraMm: 18,
+        alturasLivresMm: [350],
+      }),
+    )
+    await useEstadoDoApp.getState().salvarJogo({
+      id: 'a',
+      nome: 'Catan',
+      medidas: criarMedidas(295, 220, 70, { tipo: 'manual' }, true),
+      idJogoBase: null,
+      frequencia: { tipo: 'desconhecida' },
+      idLudopedia: null,
+      idBgg: null,
+    })
+
+    render(<TelaDeArranjo />)
+    await usuario.click(screen.getByRole('button', { name: 'Recalcular arranjo' }))
+    expect(await screen.findByText(/Toda a coleção coube/)).toBeInTheDocument()
+
+    // Clica no jogo na lista do arranjo
+    const itemJogo = screen.getByRole('button', { name: /selecionar catan/i })
+    await usuario.click(itemJogo)
+
+    // Painel de inspeção deve estar visível
+    expect(screen.getByTestId('painel-inspecao')).toBeInTheDocument()
+    expect(screen.getByText(/295 × 220 × 70 mm/)).toBeInTheDocument()
+
+    // Pressionar Esc desmarca
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByTestId('painel-inspecao')).not.toBeInTheDocument()
   })
 })
